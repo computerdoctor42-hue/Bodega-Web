@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo RealTime - TROYABANANA</title>
-    <script src="https://tailwindcss.com"></script>
+    <!-- Corregí el link de Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 p-5">
     <div class="max-w-4xl mx-auto">
@@ -22,29 +23,47 @@
                     </tr>
                 </thead>
                 <tbody id="tabla-productos" class="divide-y divide-gray-200">
-                    <!-- Los datos aparecerán aquí -->
+                    <tr><td colspan="2" class="p-4 text-center text-gray-500">Cargando productos...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        const URL = "https://supabase.co";
-        const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_pG1P-nFP";
+        // EN JAVASCRIPT SE USA 'const' O 'var', NO 'string'
+        // Y fíjate en la 'r' final de la Key
+        const URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co/rest/v1/productos_web";
+        const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
 
         async function cargarProductos() {
-            const res = await fetch(URL, {
-                headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
-            });
-            const productos = await res.json();
-            const tabla = document.getElementById('tabla-productos');
-            
-            tabla.innerHTML = productos.map(p => `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="p-4 font-mono text-blue-600">${p.stock_code}</td>
-                    <td class="p-4 text-gray-700">${p.descripcion}</td>
-                </tr>
-            `).join('');
+            try {
+                const res = await fetch(URL, {
+                    headers: { 
+                        "apikey": KEY, 
+                        "Authorization": "Bearer " + KEY 
+                    }
+                });
+                
+                if (!res.ok) throw new Error("Error en la respuesta del servidor");
+
+                const productos = await res.json();
+                const tabla = document.getElementById('tabla-productos');
+                
+                if (productos.length === 0) {
+                    tabla.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">No hay productos en la nube. Dale al botón en C#.</td></tr>';
+                    return;
+                }
+
+                tabla.innerHTML = productos.map(p => `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4 font-mono text-blue-600">${p.stock_code}</td>
+                        <td class="p-4 text-gray-700">${p.descripcion}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error(error);
+                document.getElementById('tabla-productos').innerHTML = `<tr><td colspan="2" class="p-4 text-red-500 text-center">Error: ${error.message}</td></tr>`;
+            }
         }
 
         cargarProductos();
