@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo RealTime - TROYABANANA</title>
+    <script src="https://tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-5">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-10 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Inventario Bodega</h1>
+            <p class="text-gray-500">Sincronizado desde el sistema local</p>
+        </header>
+
+        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-blue-600 text-white">
+                    <tr>
+                        <th class="p-4">Código</th>
+                        <th class="p-4">Descripción</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-productos" class="divide-y divide-gray-200">
+                    <!-- Los datos aparecerán aquí -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const URL = "https://supabase.co";
+        const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_pG1P-nFP";
+
+        async function cargarProductos() {
+            const res = await fetch(URL, {
+                headers: { "apikey": KEY, "Authorization": `Bearer ${KEY}` }
+            });
+            const productos = await res.json();
+            const tabla = document.getElementById('tabla-productos');
+            
+            tabla.innerHTML = productos.map(p => `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="p-4 font-mono text-blue-600">${p.stock_code}</td>
+                    <td class="p-4 text-gray-700">${p.descripcion}</td>
+                </tr>
+            `).join('');
+        }
+
+        cargarProductos();
+    </script>
+</body>
+</html>
