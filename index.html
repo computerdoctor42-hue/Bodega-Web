@@ -3,70 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo RealTime - TROYABANANA</title>
-    <!-- Corregí el link de Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 p-5">
-    <div class="max-w-4xl mx-auto">
-        <header class="mb-10 text-center">
-            <h1 class="text-3xl font-bold text-gray-800">Inventario Bodega</h1>
-            <p class="text-gray-500">Sincronizado desde el sistema local</p>
-        </header>
-
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
-            <table class="w-full text-left">
-                <thead class="bg-blue-600 text-white">
-                    <tr>
-                        <th class="p-4">Código</th>
-                        <th class="p-4">Descripción</th>
-                    </tr>
-                </thead>
-                <tbody id="tabla-productos" class="divide-y divide-gray-200">
-                    <tr><td colspan="2" class="p-4 text-center text-gray-500">Cargando productos...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-        // EN JAVASCRIPT SE USA 'const' O 'var', NO 'string'
-        // Y fíjate en la 'r' final de la Key
-        const URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co/rest/v1/productos_web";
-        const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
-
-        async function cargarProductos() {
-            try {
-                const res = await fetch(URL, {
-                    headers: { 
-                        "apikey": KEY, 
-                        "Authorization": "Bearer " + KEY 
-                    }
-                });
-                
-                if (!res.ok) throw new Error("Error en la respuesta del servidor");
-
-                const productos = await res.json();
-                const tabla = document.getElementById('tabla-productos');
-                
-                if (productos.length === 0) {
-                    tabla.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">No hay productos en la nube. Dale al botón en C#.</td></tr>';
-                    return;
-                }
-
-                tabla.innerHTML = productos.map(p => `
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="p-4 font-mono text-blue-600">${p.stock_code}</td>
-                        <td class="p-4 text-gray-700">${p.descripcion}</td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error(error);
-                document.getElementById('tabla-productos').innerHTML = `<tr><td colspan="2" class="p-4 text-red-500 text-center">Error: ${error.message}</td></tr>`;
-            }
+    <title>Tecnicentro - Lubricadora Taribela</title>
+    <style>
+        :root {
+            --primary: #1e3a8a; /* Azul oscuro profesional */
+            --secondary: #2563eb; /* Azul brillante */
+            --accent: #f59e0b; /* Dorado/Naranja para botones de acción */
+            --bg: #f1f5f9;
+            --text: #0f172a;
         }
 
-        cargarProductos();
-    </script>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        /* Navegación */
+        nav {
+            background: var(--primary);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        nav .logo {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 20px;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: var(--accent);
+        }
+
+        /* Hero Section (Banner Principal) */
+        .hero {
+            height: 60vh;
+            background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), 
+                        url('https://images.unsplash.com/photo-1486006920555-c77dcf18193b?auto=format&fit=crop&q=80&w=1200'); /* Imagen de taller/herramientas */
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: white;
+            padding: 0 20px;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin-bottom: 30px;
+        }
+
+        /* Botones de Menú Central */
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            margin: -50px auto 50px;
+            padding: 0 20px;
+        }
+
+        .menu-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            text-decoration: none;
+            color: var(--text);
+            border-bottom: 5px solid var(--primary);
+        }
+
+        .menu-card:hover {
+            transform: translateY(-10px);
+            border-bottom-color: var(--accent);
+        }
+
+        .menu-card i {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .menu-card h3 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--primary);
+        }
+
+        .menu-card p {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">TARIBELA LUBRICADORA</div>
+        <ul>
+            <li><a href="index.html">Inicio</a></li>
+            <li><a href="productos.html">Productos</a></li>
+            <li><a href="registro.html">Registro</a></li>
+        </ul>
+    </nav>
+
+    <div class="hero">
+        <h1>Tecnicentro Automotriz</h1>
+        <p>Cuidado profesional para tu vehículo en San Carlos, Quevedo. Calidad garantizada en cada cambio de aceite.</p>
+    </div>
+
+    <div class="menu-container">
+        <!-- OPCIÓN 1: REGISTRO -->
+        <a href="registro.html" class="menu-card">
+            <i>👤</i>
+            <h3>REGISTRARSE</h3>
+            <p>Regístrate como cliente para agilizar tu facturación y recibir promociones.</p>
+        </a>
+
+        <!-- OPCIÓN 2: PRODUCTOS -->
+        <a href="productos.html" class="menu-card">
+            <i>🛢️</i>
+            <h3>VER PRODUCTOS</h3>
+            <p>Explora nuestro catálogo de lubricantes, filtros y repuestos disponibles.</p>
+        </a>
+    </div>
+
+    <footer>
+        © 2026 Taribela - San Carlos, Quevedo, Los Ríos - Ecuador
+    </footer>
+
 </body>
 </html>
