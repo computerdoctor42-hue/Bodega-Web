@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Clientes - Taribela</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #f8fafc; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #2563eb; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; background: #2563eb; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        button:disabled { background: #94a3b8; }
+    </style>
+</head>
+<body>
+<!-- 1. PEGA EL MENÚ JUSTO AQUÍ (AL INICIO DEL BODY) -->
+<nav>
+    <div class="logo">TARIBELA LUBRICADORA</div>
+    <ul>
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="productos.html">Productos</a></li>
+        <li><a href="registro.html">Registro</a></li>
+    </ul>
+</nav>
+<div class="card">
+    <h2>Registro Nuevo Cliente</h2>
+    <input type="text" id="Name" placeholder="Nombre Completo" required>
+    <input type="text" id="IdNumber" placeholder="Cédula / RUC" required>
+    <input type="text" id="Tradename" placeholder="Nombre Comercial (Opcional)">
+    <input type="text" id="Address" placeholder="Dirección">
+    <input type="text" id="Telefono" placeholder="Teléfono">
+    <input type="email" id="Email" placeholder="Correo Electrónico">
+    <button id="btnEnviar">REGISTRARME</button>
+</div>
+
+<script>
+    // 1. VARIABLES GLOBALES (Asegúrate de poner tu KEY real aquí)
+    const VAL_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
+    const VAL_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP"; 
+
+    // 2. INICIALIZACIÓN
+    const supabaseClient = supabase.createClient(VAL_URL, VAL_KEY);
+
+    // 3. FUNCIÓN DE CLIC
+    document.getElementById('btnEnviar').onclick = async function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerText = "Enviando...";
+
+        const datos = {
+            Name: document.getElementById('Name').value.trim(),
+            IdNumber: document.getElementById('IdNumber').value.trim(),
+            Tradename: document.getElementById('Tradename').value.trim(),
+            Address: document.getElementById('Address').value.trim(),
+            Telefono: document.getElementById('Telefono').value.trim(),
+            Email: document.getElementById('Email').value.trim(),
+            Category: "A",
+            isDeleted: "N",
+            advertising: "S",
+            Salesperson: "1"
+        };
+
+        try {
+          const { error } = await supabaseClient.from('ArCustomer').insert([datos]);
+            if (error) throw error;
+            
+            alert("¡Registro exitoso en la nube!");
+		window.location.href = "index.html";
+            location.reload();
+        } catch (err) {
+            alert("Error: " + err.message);
+            console.error(err);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "REGISTRARME";
+        }
+    };
+</script>
+
+</body>
+</html>
