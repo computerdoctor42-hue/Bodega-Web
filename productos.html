@@ -50,7 +50,7 @@
                         <tr>
                             <td colspan="4" class="p-20 text-center">
                                 <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
-                                <p class="text-gray-400 font-medium">Obteniendo datos de Supabase...</p>
+                                <p class="text-gray-400 font-medium text-sm tracking-wide">Obteniendo datos de Supabase...</p>
                             </td>
                         </tr>
                     </tbody>
@@ -64,6 +64,7 @@
     </div>
 
     <script>
+        // Configuración de Supabase
         const URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co/rest/v1/productos_web";
         const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
 
@@ -82,22 +83,27 @@
                 const tabla = document.getElementById('tabla-productos');
                 const badge = document.getElementById('status-badge');
                 
+                // Indicador de estado ONLINE
                 badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-green-500 animate-pulse"></span> SISTEMA ONLINE`;
                 badge.className = "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200";
 
                 if (productos.length === 0) {
-                    tabla.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-gray-400 italic">No hay registros.</td></tr>';
+                    tabla.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-gray-400 italic">No hay registros disponibles.</td></tr>';
                     return;
                 }
 
+                // Generación de filas usando Price y Stock (Nombres exactos de BD)
                 tabla.innerHTML = productos.map(p => {
-                    const precioOriginal = parseFloat(p.precio) || 0;
-                    const precioIVA = (precioOriginal * 1.15).toFixed(2);
-                    const stock = parseInt(p.stock) || 0;
+                    // Mapeo manual de campos (Case Sensitive)
+                    const precioOriginal = parseFloat(p.Price) || 0; 
+                    const stockReal = parseInt(p.Stock) || 0;
                     
-                    let stockUI = "text-green-600";
-                    if (stock <= 0) stockUI = "text-red-600";
-                    else if (stock <= 5) stockUI = "text-yellow-600";
+                    const precioIVA = (precioOriginal * 1.15).toFixed(2);
+                    
+                    // Lógica de color para el número de stock
+                    let stockColor = "text-green-600";
+                    if (stockReal <= 0) stockColor = "text-red-600";
+                    else if (stockReal <= 5) stockColor = "text-yellow-500";
 
                     return `
                         <tr class="hover:bg-blue-50/40 transition-all group">
@@ -106,8 +112,8 @@
                                 <div class="text-gray-900 font-bold group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</div>
                                 <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Calidad Taribela</div>
                             </td>
-                            <td class="p-5 text-center font-black text-lg ${stockUI}">
-                                ${stock}
+                            <td class="p-5 text-center font-black text-xl ${stockColor}">
+                                ${stockReal}
                             </td>
                             <td class="p-5 text-right">
                                 <span class="text-xs font-bold text-gray-300 mr-0.5">$</span>
@@ -118,12 +124,14 @@
                 }).join('');
 
             } catch (error) {
+                console.error(error);
                 const badge = document.getElementById('status-badge');
                 badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-red-600"></span> ERROR`;
                 badge.className = "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200";
             }
         }
 
+        // Ejecución inicial y temporizador
         cargarProductos();
         setInterval(cargarProductos, 30000);
     </script>
