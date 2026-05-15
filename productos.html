@@ -4,44 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo RealTime - TROYABANANA</title>
-    <!-- Corregí el link de Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .nav-link { transition: all 0.3s; }
+        .nav-link:hover { color: #3b82f6; }
+    </style>
 </head>
-<body class="bg-gray-50 p-5">
-<!-- 1. PEGA EL MENÚ JUSTO AQUÍ (AL INICIO DEL BODY) -->
-<nav>
-    <div class="logo">TARIBELA LUBRICADORA</div>
-    <ul>
-        <li><a href="index.html">Inicio</a></li>
-        <li><a href="productos.html">Productos</a></li>
-        <li><a href="registro.html">Registro</a></li>
-    </ul>
-</nav>
+<body class="bg-gray-100 min-h-screen">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="mb-10 text-center">
-            <h1 class="text-3xl font-bold text-gray-800">Inventario Bodega</h1>
-            <p class="text-gray-500">Sincronizado desde el sistema local</p>
+    <nav class="bg-white shadow-sm border-b border-gray-200 py-4 px-6 mb-8">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="text-xl font-bold text-blue-700 tracking-tight">TARIBELA LUBRICADORA</div>
+            <ul class="flex space-x-6 text-gray-600 font-medium">
+                <li><a href="#" class="nav-link">Inicio</a></li>
+                <li><a href="#" class="nav-link text-blue-600">Productos</a></li>
+                <li><a href="#" class="nav-link">Registro</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4">
+        <header class="mb-8 text-center sm:text-left flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+            <div>
+                <h1 class="text-4xl font-extrabold text-gray-900">Inventario Bodega</h1>
+                <p class="text-gray-500 mt-2 text-lg">Sincronización directa desde el sistema local (Quevedo)</p>
+            </div>
+            <div id="status-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-700">
+                <span class="w-2 h-2 mr-2 rounded-full bg-gray-400"></span>
+                Verificando conexión...
+            </div>
         </header>
 
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
-            <table class="w-full text-left">
-                <thead class="bg-blue-600 text-white">
-                    <tr>
-                        <th class="p-4">Código</th>
-                        <th class="p-4">Descripción</th>
-                    </tr>
-                </thead>
-                <tbody id="tabla-productos" class="divide-y divide-gray-200">
-                    <tr><td colspan="2" class="p-4 text-center text-gray-500">Cargando productos...</td></tr>
-                </tbody>
-            </table>
+        <div class="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="p-5 text-sm font-semibold text-gray-600 uppercase tracking-wider">Código</th>
+                            <th class="p-5 text-sm font-semibold text-gray-600 uppercase tracking-wider">Descripción del Producto</th>
+                            <th class="p-5 text-sm font-semibold text-gray-600 uppercase tracking-wider text-center">Stock</th>
+                            <th class="p-5 text-sm font-semibold text-gray-600 uppercase tracking-wider text-right">Precio Final (+IVA)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-productos" class="divide-y divide-gray-100">
+                        <tr>
+                            <td colspan="4" class="p-10 text-center">
+                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600 mb-2"></div>
+                                <p class="text-gray-500">Conectando con Supabase...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <footer class="mt-12 pb-8 text-center text-gray-400 text-sm">
+            &copy; 2026 TROYABANANA - Taribela Lubricadora. Todos los derechos reservados.
+        </footer>
     </div>
 
     <script>
-        // EN JAVASCRIPT SE USA 'const' O 'var', NO 'string'
-        // Y fíjate en la 'r' final de la Key
+        // Configuración de Supabase
         const URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co/rest/v1/productos_web";
         const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
 
@@ -54,29 +79,71 @@
                     }
                 });
                 
-                if (!res.ok) throw new Error("Error en la respuesta del servidor");
+                if (!res.ok) throw new Error("Error de conexión");
 
                 const productos = await res.json();
                 const tabla = document.getElementById('tabla-productos');
+                const badge = document.getElementById('status-badge');
                 
+                // Actualizar badge de estado
+                badge.innerHTML = `<span class="w-2 h-2 mr-2 rounded-full bg-green-500 animate-pulse"></span> Sistema Online`;
+                badge.className = "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700";
+
                 if (productos.length === 0) {
-                    tabla.innerHTML = '<tr><td colspan="2" class="p-4 text-center text-gray-500">No hay productos en la nube. Dale al botón en C#.</td></tr>';
+                    tabla.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-gray-500 italic text-lg text-gray-400">No hay productos sincronizados. Activa el botón en C#.</td></tr>';
                     return;
                 }
 
-                tabla.innerHTML = productos.map(p => `
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="p-4 font-mono text-blue-600">${p.stock_code}</td>
-                        <td class="p-4 text-gray-700">${p.descripcion}</td>
-                    </tr>
-                `).join('');
+                // Renderizado de filas
+                tabla.innerHTML = productos.map(p => {
+                    const precioIVA = (parseFloat(p.precio) * 1.15).toFixed(2);
+                    const stock = parseInt(p.stock);
+                    
+                    // Lógica de colores para el stock
+                    let stockClass = "bg-green-100 text-green-800";
+                    if (stock <= 0) stockClass = "bg-red-100 text-red-800";
+                    else if (stock <= 5) stockClass = "bg-yellow-100 text-yellow-800";
+
+                    return `
+                        <tr class="hover:bg-blue-50/50 transition-colors">
+                            <td class="p-5 font-mono text-sm text-blue-600 font-bold tracking-tighter">${p.stock_code}</td>
+                            <td class="p-5">
+                                <div class="text-gray-900 font-semibold">${p.descripcion}</div>
+                                <div class="text-xs text-gray-400">Garantía Taribela</div>
+                            </td>
+                            <td class="p-5 text-center">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold ${stockClass}">
+                                    ${stock} unidades
+                                </span>
+                            </td>
+                            <td class="p-5 text-right font-black text-gray-900 text-lg">
+                                <span class="text-xs font-normal text-gray-400 mr-1">$</span>${precioIVA}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
             } catch (error) {
                 console.error(error);
-                document.getElementById('tabla-productos').innerHTML = `<tr><td colspan="2" class="p-4 text-red-500 text-center">Error: ${error.message}</td></tr>`;
+                const badge = document.getElementById('status-badge');
+                badge.innerHTML = `<span class="w-2 h-2 mr-2 rounded-full bg-red-500"></span> Desconectado`;
+                badge.className = "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700";
+                
+                document.getElementById('tabla-productos').innerHTML = `
+                    <tr>
+                        <td colspan="4" class="p-10 text-center">
+                            <div class="text-red-500 font-bold">Error al cargar datos</div>
+                            <div class="text-gray-400 text-sm">${error.message}</div>
+                        </td>
+                    </tr>`;
             }
         }
 
+        // Carga inicial
         cargarProductos();
+        
+        // Auto-refresco cada 30 segundos para que sea "RealTime"
+        setInterval(cargarProductos, 30000);
     </script>
 </body>
 </html>
