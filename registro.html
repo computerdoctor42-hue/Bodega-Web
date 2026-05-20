@@ -5,16 +5,24 @@
     <title>Registro de Clientes - Taribela</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; background: #f8fafc; display: flex; justify-content: center; padding: 20px; }
+        body { font-family: sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+        nav { background: #2563eb; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 20px; }
+        nav .logo { color: white; font-weight: bold; font-size: 1.2rem; }
+        nav ul { list-style: none; display: flex; margin: 0; padding: 0; }
+        nav ul li { margin-left: 20px; }
+        nav ul li a { color: white; text-decoration: none; font-weight: bold; }
+        nav ul li a:hover { text-decoration: underline; }
+        
+        .container { display: flex; justify-content: center; width: 100%; }
         .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { text-align: center; color: #2563eb; }
+        h2 { text-align: center; color: #2563eb; margin-top: 0; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
         button { width: 100%; background: #2563eb; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
         button:disabled { background: #94a3b8; }
     </style>
 </head>
 <body>
-<!-- 1. PEGA EL MENÚ JUSTO AQUÍ (AL INICIO DEL BODY) -->
+
 <nav>
     <div class="logo">TARIBELA LUBRICADORA</div>
     <ul>
@@ -23,56 +31,71 @@
         <li><a href="registro.html">Registro</a></li>
     </ul>
 </nav>
-<div class="card">
-    <h2>Registro Nuevo Cliente</h2>
-    <input type="text" id="Name" placeholder="Nombre Completo" required>
-    <input type="text" id="IdNumber" placeholder="Cédula / RUC" required>
-    <input type="text" id="Tradename" placeholder="Nombre Comercial (Opcional)">
-    <input type="text" id="Address" placeholder="Dirección">
-    <input type="text" id="Telefono" placeholder="Teléfono">
-    <input type="email" id="Email" placeholder="Correo Electrónico">
-    <button id="btnEnviar">REGISTRARME</button>
+
+<div class="container">
+    <div class="card">
+        <h2>Registro Nuevo Cliente</h2>
+        <input type="text" id="Name" placeholder="Nombre Completo" required>
+        <input type="text" id="IdNumber" placeholder="Cédula / RUC" required>
+        <input type="text" id="Tradename" placeholder="Nombre Comercial (Opcional)">
+        <input type="text" id="Address" placeholder="Dirección">
+        <input type="text" id="Telefono" placeholder="Teléfono">
+        <input type="email" id="Email" placeholder="Correo Electrónico">
+        
+        <input type="password" id="ClaveWeb" placeholder="Cree su Contraseña Web" required>
+        
+        <button id="btnEnviar">REGISTRARME</button>
+    </div>
 </div>
 
 <script>
-    // 1. VARIABLES GLOBALES (Asegúrate de poner tu KEY real aquí)
     const VAL_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
     const VAL_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP"; 
 
-    // 2. INICIALIZACIÓN
     const supabaseClient = supabase.createClient(VAL_URL, VAL_KEY);
 
-    // 3. FUNCIÓN DE CLIC
     document.getElementById('btnEnviar').onclick = async function() {
         const btn = this;
+        
+        const nameVal = document.getElementById('Name').value.trim();
+        const idVal = document.getElementById('IdNumber').value.trim();
+        const claveVal = document.getElementById('ClaveWeb').value.trim();
+        
+        // Validación de campos obligatorios
+        if (nameVal.length === 0 || idVal.length === 0 || claveVal.length === 0) {
+            alert("Por favor, complete los campos obligatorios: Nombre, Identificación y Contraseña.");
+            return;
+        }
+
         btn.disabled = true;
         btn.innerText = "Enviando...";
 
         const datos = {
-            Name: document.getElementById('Name').value.trim(),
-            IdNumber: document.getElementById('IdNumber').value.trim(),
-            Tradename: document.getElementById('Tradename').value.trim(),
-            Address: document.getElementById('Address').value.trim(),
-            Telefono: document.getElementById('Telefono').value.trim(),
-            Email: document.getElementById('Email').value.trim(),
+            Name: nameVal,
+            IdNumber: idVal,
+            Tradename: document.getElementById('Tradename').value.trim() || null,
+            Address: document.getElementById('Address').value.trim() || null,
+            Telefono: document.getElementById('Telefono').value.trim() || null,
+            Email: document.getElementById('Email').value.trim() || null,
             Category: "A",
             isDeleted: "N",
             advertising: "S",
             Salesperson: "1",
-	    is_downloaded: false
+            is_downloaded: false,
+            
+            // SEGURO: Se envía la clave que el cliente digitó en el formulario
+            clave_web: claveVal
         };
 
         try {
-          const { error } = await supabaseClient.from('ArCustomer').insert([datos]);
+            const { error } = await supabaseClient.from('ArCustomer').insert([datos]);
             if (error) throw error;
             
-            alert("¡Registro exitoso en la nube!");
-		window.location.href = "index.html";
-            location.reload();
+            alert("¡Registro exitoso! Ya puedes iniciar sesión con tus datos.");
+            window.location.href = "index.html";
         } catch (err) {
-            alert("Error: " + err.message);
+            alert("Error al registrarse: " + err.message);
             console.error(err);
-        } finally {
             btn.disabled = false;
             btn.innerText = "REGISTRARME";
         }
