@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tecnocentro Vehículos - Generar Pedido Web</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary-color: #1a252f; 
+            --accent-color: #007bff;  
+            --bg-light: #f8f9fa;
+            --text-dark: #333;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-dark);
+        }
+
+        /* Estilo simple para el nav interno */
+        nav { background: #1e3a8a; padding: 10px 20px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between;}
+        nav a { color: white; text-decoration: none; font-weight: bold; }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+
+        .header-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .info-group label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        .info-group span {
+            font-size: 16px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .search-section {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .input-group { display: flex; flex-direction: column; }
+        .input-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 9px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary { background-color: var(--accent-color); color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; padding: 6px 10px; }
+        .btn-success { background-color: #28a745; color: white; width: 100%; margin-top: 20px; font-size: 16px; padding: 12px; }
+
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--primary-color); color: white; font-size: 14px; }
+
+        .modal {
+            display: none; 
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff; padding: 20px; border-radius: 8px;
+            width: 90%; max-width: 700px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; }
+        .close-btn { font-size: 24px; cursor: pointer; color: #999; }
+
+        .product-item { display: grid; grid-template-columns: 2.5fr 1fr 1fr; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; }
+        .product-item:hover { background-color: #f1f3f5; }
+        .product-header-list { display: grid; grid-template-columns: 2.5fr 1fr 1fr; padding: 8px 12px; background: #e9ecef; font-weight: bold; font-size: 13px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html">⬅️ Volver al Inicio</a>
+    <span style="color: white; font-weight: bold;" id="txtNavUsuario"></span>
+</nav>
+
+<div class="container">
+    <h2>TECNOCENTRO VEHÍCULOS - ORDEN DE PEDIDO WEB</h2>
+    
+    <div class="header-info">
+        <div class="info-group">
+            <label>Cliente Autenticado</label>
+            <span id="lblCliente">Cargando cliente...</span>
+        </div>
+        <div class="info-group">
+            <label>Bodega Despacho</label>
+            <span>01 - Principal</span>
+        </div>
+        <div class="info-group">
+            <label>Estado Inicial</label>
+            <span>Pendiente (N)</span>
+        </div>
+    </div>
+
+    <div class="search-section">
+        <div class="input-group" style="flex: 2;">
+            <label>Código Producto</label>
+            <div style="display: flex; gap: 5px;">
+                <input type="text" id="txtCodigo" placeholder="Seleccione un repuesto..." readonly>
+                <button type="button" class="btn btn-secondary" onclick="abrirPopup()">🔍 Buscar</button>
+            </div>
+        </div>
+        <div class="input-group" style="flex: 3;">
+            <label>Descripción</label>
+            <input type="text" id="txtDescripcion" readonly style="background-color: #f1f3f5;">
+        </div>
+        <div class="input-group" style="flex: 1;">
+            <label>Cantidad</label>
+            <input type="number" id="txtCantidad" value="1" min="1">
+        </div>
+        <div class="input-group" style="flex: 1;">
+            <label>Precio Unit.</label>
+            <input type="text" id="txtPrecio" readonly style="background-color: #f1f3f5;">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="agregarAlCarrito()">Agregar</button>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Línea</th>
+                    <th>Código</th>
+                    <th>Descripción</th>
+                    <th>Cant.</th>
+                    <th>Precio Unit.</th>
+                    <th>IVA (15%)</th>
+                    <th>Subtotal</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="detallePedido"></tbody>
+        </table>
+    </div>
+
+    <button type="button" class="btn btn-success" id="btnFinalizar" onclick="finalizarPedidoWeb()">💾 Confirmar y Enviar Pedido a Supabase</button>
+</div>
+
+<div id="modalProductos" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Buscador de Repuestos y Productos</h3>
+            <span class="close-btn" onclick="cerrarPopup()">&times;</span>
+        </div>
+        <input type="text" id="txtFiltroWeb" placeholder="Escriba el código o descripción a buscar..." style="width: 100%; box-sizing: border-box; margin-bottom: 15px; padding: 10px;" onkeyup="filtrarProductos()">
+        <div class="product-header-list">
+            <span>Código / Descripción</span>
+            <span style="text-align: right;">Stock Disp.</span>
+            <span style="text-align: right;">Precio Unit.</span>
+        </div>
+        <div id="listaProductosPopup" style="max-height: 300px; overflow-y: auto; margin-top: 5px;"></div>
+    </div>
+</div>
+
+<script>
+    const VAL_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
+    const VAL_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP"; 
+
+    let listaProductosReal = []; 
+    let lineaCorrelativa = 1;
+    let ID_CLIENTE_AUTENTICADO = null; // Variable global para amarrar la orden
+
+    // BLINDAJE: Seguridad de página de órdenes
+    window.onload = function() {
+        const sesion = sessionStorage.getItem("clienteLogueado");
+        if (!sesion) {
+            alert("Acceso denegado. Debe iniciar sesión en el Inicio para generar pedidos.");
+            window.location.href = "index.html";
+            return;
+        }
+
+        const cliente = JSON.parse(sesion);
+        ID_CLIENTE_AUTENTICADO = cliente.Customer; // Su código numérico real de la BD
+        
+        // Colocamos visualmente los datos del cliente real logueado
+        document.getElementById("lblCliente").innerHTML = `${cliente.Name.toUpperCase()} (CÓD: ${cliente.Customer || 'WEB_NUEVO'})`;
+        document.getElementById("txtNavUsuario").innerText = `👤 Cliente: ${cliente.Name}`;
+    };
+
+    // --- MANTIENE TODA TU EXCELENTE LÓGICA DE POPUP Y FILTROS ---
+    async function abrirPopup() {
+        document.getElementById('modalProductos').style.display = 'flex';
+        document.getElementById('txtFiltroWeb').value = ''; 
+        const contenedor = document.getElementById('listaProductosPopup');
+        contenedor.innerHTML = `<p style="text-align:center; color:#666; font-weight:bold;">Consultando stock real en Supabase...</p>`;
+
+        const url = `${VAL_URL}/rest/v1/productos_web?select=stock_code,descripcion,Price,Stock`; 
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
+            });
+            if (!response.ok) throw new Error(`Status: ${response.status}`);
+            listaProductosReal = await response.json();
+            if(listaProductosReal.length === 0) {
+                contenedor.innerHTML = `<p style="text-align:center; color:#dc3545; font-weight:bold;">Sin datos en productos_web.</p>`;
+            } else {
+                renderizarProductosEnPopup(listaProductosReal);
+            }
+        } catch (error) {
+            contenedor.innerHTML = `<p style="text-align:center; color:red; font-weight:bold;">Error: ${error.message}</p>`;
+        }
+        document.getElementById('txtFiltroWeb').focus();
+    }
+
+    function cerrarPopup() { document.getElementById('modalProductos').style.display = 'none'; }
+
+    function obtenerCodigosEnCarrito() {
+        let codigos = [];
+        let filas = document.querySelectorAll('#detallePedido tr');
+        filas.forEach(fila => {
+            let cod = fila.getAttribute('data-codigo');
+            if(cod) codigos.push(cod.toUpperCase());
+        });
+        return codigos;
+    }
+
+    function renderizarProductosEnPopup(productos) {
+        const contenedor = document.getElementById('listaProductosPopup');
+        contenedor.innerHTML = ""; 
+        let codigosExcluir = obtenerCodigosEnCarrito();
+        let productosVisibles = productos.filter(p => {
+            let cod = p.stock_code ? String(p.stock_code).trim().toUpperCase() : "";
+            return !codigosExcluir.includes(cod);
+        });
+
+        if (productosVisibles.length === 0) {
+            contenedor.innerHTML = "<p style='text-align:center; color:#999;'>No hay productos disponibles...</p>";
+            return;
+        }
+
+        productosVisibles.forEach(prod => {
+            let codigo = prod.stock_code ? String(prod.stock_code).trim() : "SIN_COD";
+            let desc = prod.descripcion ? String(prod.descripcion).trim() : "SIN_DESC";
+            let precio = prod.Price ? parseFloat(prod.Price) : 0.00;
+            let stockDisp = prod.Stock ? parseInt(prod.Stock) : 0; 
+
+            const div = document.createElement('div');
+            div.className = 'product-item';
+            div.onclick = () => seleccionarProducto(codigo, desc, precio);
+            div.innerHTML = `
+                <span><strong>${codigo}</strong> - ${desc}</span>
+                <span style="text-align: right; font-weight: bold; color: ${stockDisp > 0 ? '#28a745' : '#dc3545'};">${stockDisp}</span>
+                <span style="text-align: right; font-weight: 600;">$${precio.toFixed(2)}</span>
+            `;
+            contenedor.appendChild(div);
+        });
+    }
+
+    function filtrarProductos() {
+        let filtro = document.getElementById('txtFiltroWeb').value.toUpperCase().trim();
+        if (filtro === "") { renderizarProductosEnPopup(listaProductosReal); return; }
+        let filtrados = listaProductosReal.filter(prod => {
+            return (prod.stock_code || "").toUpperCase().includes(filtro) || (prod.descripcion || "").toUpperCase().includes(filtro);
+        });
+        renderizarProductosEnPopup(filtrados);
+    }
+
+    function seleccionarProducto(codigo, descripcion, precio) {
+        document.getElementById('txtCodigo').value = codigo;
+        document.getElementById('txtDescripcion').value = descripcion;
+        document.getElementById('txtPrecio').value = precio.toFixed(2);
+        cerrarPopup();
+        document.getElementById('txtCantidad').focus();
+    }
+
+    async function agregarAlCarrito() {
+        let codigo = document.getElementById('txtCodigo').value;
+        let desc = document.getElementById('txtDescripcion').value;
+        let cant = parseInt(document.getElementById('txtCantidad').value);
+        let precio = parseFloat(document.getElementById('txtPrecio').value);
+
+        if(!codigo || isNaN(precio)) { alert('Seleccione un producto.'); return; }
+        if(cant <= 0 || isNaN(cant)) { alert('Cantidad inválida.'); return; }
+
+        let subtotal = cant * precio;
+        let iva = subtotal * 0.15; 
+        let totalFila = subtotal + iva;
+
+        let table = document.getElementById('detallePedido');
+        table.innerHTML += `
+            <tr id="fila-${lineaCorrelativa}" data-codigo="${codigo}" data-cantidad="${cant}" data-precio="${precio}" data-iva="${iva}" data-subtotal="${subtotal}">
+                <td>${lineaCorrelativa}</td>
+                <td><strong>${codigo}</strong></td>
+                <td>${desc}</td>
+                <td>${cant}</td>
+                <td>$${precio.toFixed(2)}</td>
+                <td>$${iva.toFixed(2)}</td>
+                <td>$${totalFila.toFixed(2)}</td>
+                <td><button type="button" class="btn btn-danger" onclick="document.getElementById('fila-${lineaCorrelativa}').remove()">❌</button></td>
+            </tr>
+        `;
+        lineaCorrelativa++;
+        document.getElementById('txtCodigo').value = '';
+        document.getElementById('txtDescripcion').value = '';
+        document.getElementById('txtPrecio').value = '';
+        document.getElementById('txtCantidad').value = '1';
+    }
+
+    // PROCESAMIENTO DINÁMICO CON EL CLIENTE LOGUEADO
+    async function finalizarPedidoWeb() {
+        let filas = document.querySelectorAll('#detallePedido tr');
+        if(filas.length === 0) { alert('El carrito está vacío.'); return; }
+
+        const btn = document.getElementById('btnFinalizar');
+        btn.disabled = true;
+        btn.innerText = "⚡ Insertando pedido de cliente autenticado...";
+
+        try {
+            // 1. Calcular el secuencial correlativo manual
+            const urlMaxOrder = `${VAL_URL}/rest/v1/SorMaster?select=SalesOrder&order=SalesOrder.desc&limit=1`;
+            const resMax = await fetch(urlMaxOrder, {
+                method: "GET",
+                headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
+            });
+            if(!resMax.ok) throw new Error("Error obteniendo correlativo.");
+            const dataMax = await resMax.json();
+            
+            let proximoSalesOrder = 1;
+            if(dataMax.length > 0 && dataMax[0].SalesOrder) {
+                proximoSalesOrder = parseInt(dataMax[0].SalesOrder) + 1;
+            }
+
+            // 2. Insertar Cabecera usando el ID_CLIENTE_AUTENTICADO real del login
+            const urlCabecera = `${VAL_URL}/rest/v1/SorMaster`;
+            const resCabecera = await fetch(urlCabecera, {
+                method: "POST",
+                headers: {
+                    "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}`, "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    SalesOrder: proximoSalesOrder,
+                    Customer: ID_CLIENTE_AUTENTICADO,  // ¡BINGO! ID Real del cliente logueado
+                    Branch: 1, Emissionpoint: 1, WareHouse: "01",
+                    IsCompleted: "N", IsCanceled: "N", IsProcessed: "N"
+                })
+            });
+
+            if(!resCabecera.ok) throw new Error("Error al guardar en SorMaster.");
+
+            // 3. Estructurar líneas de detalle
+            let itemsDetalle = [];
+            let itemLine = 1;
+            filas.forEach(fila => {
+                itemsDetalle.push({
+                    SalesOrder: proximoSalesOrder,
+                    SalesOrderLine: itemLine,
+                    StockCode: fila.getAttribute('data-codigo'),
+                    WareHouse: "01",
+                    Cantidad: parseInt(fila.getAttribute('data-cantidad')),
+                    Uom: "UNID",
+                    Price: parseFloat(fila.getAttribute('data-precio')),
+                    TaxValue: parseFloat(fila.getAttribute('data-iva'))
+                });
+                itemLine++;
+            });
+
+            // 4. Insertar detalles masivos
+            const urlDetalle = `${VAL_URL}/rest/v1/SorDetail`;
+            const resDetalle = await fetch(urlDetalle, {
+                method: "POST",
+                headers: {
+                    "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}`, "Content-Type": "application/json"
+                },
+                body: JSON.stringify(itemsDetalle)
+            });
+
+            if(!resDetalle.ok) throw new Error("Error al guardar en SorDetail.");
+
+            alert(`¡Pedido de Venta procesado con éxito!\nRegistrado a tu nombre con la Orden N°: ${proximoSalesOrder}`);
+            document.getElementById('detallePedido').innerHTML = "";
+            lineaCorrelativa = 1;
+
+        } catch (error) {
+            alert(`Fallo: ${error.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "💾 Confirmar y Enviar Pedido a Supabase";
+        }
+    }
+</script>
+
+</body>
+</html>

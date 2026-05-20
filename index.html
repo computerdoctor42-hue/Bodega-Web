@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tecnicentro - Lubricadora Taribela</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --primary: #1e3a8a; /* Azul oscuro profesional */
-            --secondary: #2563eb; /* Azul brillante */
-            --accent: #f59e0b; /* Dorado/Naranja para botones de acción */
+            --primary: #1e3a8a; 
+            --secondary: #2563eb; 
+            --accent: #f59e0b; 
             --bg: #f1f5f9;
             --text: #0f172a;
         }
@@ -20,7 +21,6 @@
             color: var(--text);
         }
 
-        /* Navegación */
         nav {
             background: var(--primary);
             padding: 1rem 2rem;
@@ -44,6 +44,7 @@
             padding: 0;
             display: flex;
             gap: 20px;
+            align-items: center;
         }
 
         nav ul li a {
@@ -53,15 +54,20 @@
             transition: color 0.3s;
         }
 
-        nav ul li a:hover {
-            color: var(--accent);
-        }
+        nav ul li a:hover { color: var(--accent); }
 
-        /* Hero Section (Banner Principal) */
+        /* Estilos del Bloque Login en barra */
+        .login-box { display: flex; gap: 10px; align-items: center; }
+        .login-box input { padding: 6px 10px; border: none; border-radius: 4px; font-size: 13px; }
+        .btn-login { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .btn-login:hover { background: #d97706; }
+        .user-logged { color: #fcd34d; font-weight: bold; font-size: 14px; }
+        .btn-logout { background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px; }
+
         .hero {
-            height: 60vh;
+            height: 50vh;
             background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), 
-                        url('https://images.unsplash.com/photo-1486006920555-c77dcf18193b?auto=format&fit=crop&q=80&w=1200'); /* Imagen de taller/herramientas */
+                        url('https://images.unsplash.com/photo-1486006920555-c77dcf18193b?auto=format&fit=crop&q=80&w=1200'); 
             background-size: cover;
             background-position: center;
             display: flex;
@@ -73,18 +79,9 @@
             padding: 0 20px;
         }
 
-        .hero h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
+        .hero h1 { font-size: 3rem; margin-bottom: 10px; }
+        .hero p { font-size: 1.2rem; max-width: 600px; margin-bottom: 30px; }
 
-        .hero p {
-            font-size: 1.2rem;
-            max-width: 600px;
-            margin-bottom: 30px;
-        }
-
-        /* Botones de Menú Central */
         .menu-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -111,40 +108,29 @@
             border-bottom-color: var(--accent);
         }
 
-        .menu-card i {
-            font-size: 3rem;
-            display: block;
-            margin-bottom: 15px;
-        }
+        .menu-card i { font-size: 3rem; display: block; margin-bottom: 15px; }
+        .menu-card h3 { margin: 0; font-size: 1.4rem; color: var(--primary); }
+        .menu-card p { color: #64748b; font-size: 0.9rem; margin-top: 10px; }
 
-        .menu-card h3 {
-            margin: 0;
-            font-size: 1.4rem;
-            color: var(--primary);
-        }
-
-        .menu-card p {
-            color: #64748b;
-            font-size: 0.9rem;
-            margin-top: 10px;
-        }
-
-        footer {
-            text-align: center;
-            padding: 40px;
-            color: #64748b;
-            font-size: 0.8rem;
-        }
+        footer { text-align: center; padding: 40px; color: #64748b; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 
     <nav>
         <div class="logo">TARIBELA LUBRICADORA</div>
-        <ul>
+        <ul id="navMenu">
             <li><a href="index.html">Inicio</a></li>
-            <li><a href="productos.html">Productos</a></li>
+            <li><a href="productos.html">Hacer Pedido</a></li>
             <li><a href="registro.html">Registro</a></li>
+            
+            <li id="zonaAuth">
+                <div class="login-box">
+                    <input type="text" id="loginUser" placeholder="Cédula / RUC">
+                    <input type="password" id="loginPass" placeholder="Contraseña">
+                    <button class="btn-login" onclick="ejecutarLogin()">INGRESAR</button>
+                </div>
+            </li>
         </ul>
     </nav>
 
@@ -154,24 +140,84 @@
     </div>
 
     <div class="menu-container">
-        <!-- OPCIÓN 1: REGISTRO -->
         <a href="registro.html" class="menu-card">
             <i>👤</i>
             <h3>REGISTRARSE</h3>
             <p>Regístrate como cliente para agilizar tu facturación y recibir promociones.</p>
         </a>
 
-        <!-- OPCIÓN 2: PRODUCTOS -->
         <a href="productos.html" class="menu-card">
             <i>🛢️</i>
-            <h3>VER PRODUCTOS</h3>
-            <p>Explora nuestro catálogo de lubricantes, filtros y repuestos disponibles.</p>
+            <h3>GENERAR PEDIDO WEB</h3>
+            <p>Explora repuestos, mira el stock real y genera tu pedido directo a nuestra base.</p>
         </a>
     </div>
 
     <footer>
         © 2026 Taribela - San Carlos, Quevedo, Los Ríos - Ecuador
     </footer>
+
+<script>
+    const VAL_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
+    const VAL_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP"; 
+    const supabaseClient = supabase.createClient(VAL_URL, VAL_KEY);
+
+    // Al cargar la página, verificamos si ya inició sesión antes
+    window.onload = function() {
+        evaluarSesion();
+    };
+
+    function evaluarSesion() {
+        const clienteActivo = sessionStorage.getItem("clienteLogueado");
+        if (clienteActivo) {
+            const datosCliente = JSON.parse(clienteActivo);
+            document.getElementById("zonaAuth").innerHTML = `
+                <span class="user-logged">🚗 ¡Hola, ${datosCliente.Name}!</span>
+                <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+            `;
+        }
+    }
+
+    async function ejecutarLogin() {
+        const user = document.getElementById("loginUser").value.trim();
+        const pass = document.getElementById("loginPass").value.trim();
+
+        if(!user || !pass) {
+            alert("Por favor, ingrese su Cédula y Contraseña.");
+            return;
+        }
+
+        try {
+            // Buscamos en la tabla ArCustomer que coincida la Identificación y la Clave
+            const { data, error } = await supabaseClient
+                .from('ArCustomer')
+                .select('Customer, Name, IdNumber, clave_web')
+                .eq('IdNumber', user)
+                .eq('clave_web', pass);
+
+            if (error) throw error;
+
+            if (data.length > 0) {
+                // GUARDAMOS EN MEMORIA DE LA SESIÓN DEL NAVEGADOR
+                sessionStorage.setItem("clienteLogueado", JSON.stringify(data[0]));
+                alert("¡Bienvenido a Taribela!");
+                evaluarSesion();
+                window.location.href = "productos.html"; // Lo mandamos directo a comprar
+            } else {
+                alert("Cédula o Contraseña incorrectas. Si eres nuevo, regístrate primero.");
+            }
+        } catch (err) {
+            alert("Error en el login: " + err.message);
+            console.error(err);
+        }
+    }
+
+    function cerrarSesion() {
+        sessionStorage.removeItem("clienteLogueado");
+        alert("Sesión cerrada.");
+        location.reload();
+    }
+</script>
 
 </body>
 </html>
