@@ -65,7 +65,7 @@
         .btn-logout { background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 10px; }
 
         .hero {
-            height: 50vh;
+            height: 45vh;
             background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), 
                         url('https://images.unsplash.com/photo-1486006920555-c77dcf18193b?auto=format&fit=crop&q=80&w=1200'); 
             background-size: cover;
@@ -82,35 +82,40 @@
         .hero h1 { font-size: 3rem; margin-bottom: 10px; }
         .hero p { font-size: 1.2rem; max-width: 600px; margin-bottom: 30px; }
 
+        /* Contenedor adaptado para 3 tarjetas */
         .menu-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            max-width: 900px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1050px;
             margin: -50px auto 50px;
             padding: 0 20px;
         }
 
         .menu-card {
             background: white;
-            padding: 40px;
+            padding: 35px 25px;
             border-radius: 12px;
             text-align: center;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s;
             text-decoration: none;
             color: var(--text);
             border-bottom: 5px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         .menu-card:hover {
             transform: translateY(-10px);
             border-bottom-color: var(--accent);
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);
         }
 
         .menu-card i { font-size: 3rem; display: block; margin-bottom: 15px; }
-        .menu-card h3 { margin: 0; font-size: 1.4rem; color: var(--primary); }
-        .menu-card p { color: #64748b; font-size: 0.9rem; margin-top: 10px; }
+        .menu-card h3 { margin: 0; font-size: 1.3rem; color: var(--primary); text-transform: uppercase; }
+        .menu-card p { color: #64748b; font-size: 0.9rem; margin-top: 10px; line-height: 1.4; }
 
         footer { text-align: center; padding: 40px; color: #64748b; font-size: 0.8rem; }
     </style>
@@ -121,7 +126,8 @@
         <div class="logo">TARIBELA LUBRICADORA</div>
         <ul id="navMenu">
             <li><a href="index.html">Inicio</a></li>
-            <li><a href="productos.html">Hacer Pedido</a></li>
+            <li><a href="productos.html">Catálogo</a></li>
+            <li><a href="pedidos.html">Hacer Pedido</a></li>
             <li><a href="registro.html">Registro</a></li>
             
             <li id="zonaAuth">
@@ -141,15 +147,27 @@
 
     <div class="menu-container">
         <a href="registro.html" class="menu-card">
-            <i>👤</i>
-            <h3>REGISTRARSE</h3>
-            <p>Regístrate como cliente para agilizar tu facturación y recibir promociones.</p>
+            <div>
+                <i>👤</i>
+                <h3>Registrarse</h3>
+                <p>Crea tu cuenta de cliente para agilizar tus órdenes de mantenimiento y guardar tu clave de acceso web.</p>
+            </div>
         </a>
 
         <a href="productos.html" class="menu-card">
-            <i>🛢️</i>
-            <h3>GENERAR PEDIDO WEB</h3>
-            <p>Explora repuestos, mira el stock real y genera tu pedido directo a nuestra base.</p>
+            <div>
+                <i>🛢️</i>
+                <h3>Ver Productos</h3>
+                <p>Explora libremente nuestro inventario completo de lubricantes y filtros con stock en tiempo real.</p>
+            </div>
+        </a>
+
+        <a href="pedidos.html" class="menu-card">
+            <div>
+                <i>🛒</i>
+                <h3>Generar Pedido Web</h3>
+                <p>Ingresa con tu identificación y clave para estructurar tus pedidos y cargarlos al sistema comercial.</p>
+            </div>
         </a>
     </div>
 
@@ -162,7 +180,6 @@
     const VAL_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP"; 
     const supabaseClient = supabase.createClient(VAL_URL, VAL_KEY);
 
-    // Al cargar la página, verificamos si ya inició sesión antes
     window.onload = function() {
         evaluarSesion();
     };
@@ -188,7 +205,6 @@
         }
 
         try {
-            // Buscamos en la tabla ArCustomer que coincida la Identificación y la Clave
             const { data, error } = await supabaseClient
                 .from('ArCustomer')
                 .select('Customer, Name, IdNumber, clave_web')
@@ -198,11 +214,11 @@
             if (error) throw error;
 
             if (data.length > 0) {
-                // GUARDAMOS EN MEMORIA DE LA SESIÓN DEL NAVEGADOR
                 sessionStorage.setItem("clienteLogueado", JSON.stringify(data[0]));
                 alert("¡Bienvenido a Taribela!");
                 evaluarSesion();
-                window.location.href = "productos.html"; // Lo mandamos directo a comprar
+                // Redirección inmediata a pedidos una vez validada la sesión
+                window.location.href = "pedidos.html"; 
             } else {
                 alert("Cédula o Contraseña incorrectas. Si eres nuevo, regístrate primero.");
             }
