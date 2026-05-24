@@ -22,6 +22,7 @@
             color: var(--text-dark);
         }
 
+        /* Estilo para el nav interno */
         nav { background: #1e3a8a; padding: 10px 20px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between;}
         nav a { color: white; text-decoration: none; font-weight: bold; }
 
@@ -351,7 +352,7 @@
         document.getElementById('txtCantidad').value = '1';
     }
 
-    // LÓGICA DE PROTECCIÓN MASIVA CON TU PROPUESTA DE ALLOCATED TEMPORAL
+    // LÓGICA CON EL ESCUDO DE CONCURRENCIA AMABLE EN LA NUBE
     async function finalizarPedidoWeb() {
         let filas = document.querySelectorAll('#detallePedido tr');
         if(filas.length === 0) { alert('El carrito está vacío.'); return; }
@@ -361,71 +362,104 @@
         btn.innerText = "⚡ Validando existencias en el último milisegundo...";
 
         try {
-            // 🛡️ PASO 1: Extraer códigos únicos del carrito para auditar exclusivamente esos
+            // 🛡️ PASO 1: Extraer códigos únicos del carrito
             let codigosEnCarrito = [];
             filas.forEach(fila => {
                 let c = fila.getAttribute('data-codigo');
                 if(c && !codigosEnCarrito.includes(c)) codigosEnCarrito.push(c);
             });
 
-            // 🛡️ PASO 2: Traer stock físico publicado directo de productos_web
+            // 🛡️ PASO 2: Traer stock físico de la tabla productos_web
             const urlStocks = `${VAL_URL}/rest/v1/productos_web?stock_code=in.(${codigosEnCarrito.join(',')})`;
             const resStocks = await fetch(urlStocks, {
                 method: "GET",
                 headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
             });
-            if(!resStocks.ok) throw new Error("Error al recuperar existencias base.");
+            if(!resStocks.ok) throw new Error("No pudimos conectar con el servidor de inventarios.");
             const productosBase = await resStocks.json();
 
-            // 🛡️ PASO 3: Inner Join para sumar la cantidad de los ítems en órdenes web que NO están descargadas (IsProcessed = 'N')
+            // 🛡️ PASO 3: Auditar órdenes en cola en la web (IsProcessed = 'N')
             const urlPendientes = `${VAL_URL}/rest/v1/SorDetail?select=StockCode,Cantidad,SorMaster!inner(IsProcessed)&StockCode=in.(${codigosEnCarrito.join(',')})&SorMaster.IsProcessed=eq.N`;
             const resPendientes = await fetch(urlPendientes, {
                 method: "GET",
                 headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
             });
-            if(!resPendientes.ok) throw new Error("Error al auditar órdenes pendientes en cola.");
+            if(!resPendientes.ok) throw new Error("No pudimos auditar las órdenes en cola.");
             const detallesPendientesWeb = await resPendientes.json();
 
-            // 🛡️ PASO 4: Cruzar la información quirúrgicamente por artículo
+            let productosAjustadosMensaje = [];
+            let huboCambiosEnCarrito = false;
+
+            // 🛡️ PASO 4: Cruzar información y aplicar la amabilidad comercial
             for (let fila of filas) {
                 let codigoItem = fila.getAttribute('data-codigo');
                 let cantidadPedida = parseInt(fila.getAttribute('data-cantidad'));
+                let precioUnit = parseFloat(fila.getAttribute('data-precio'));
 
-                // Stock base
                 let prodBase = productosBase.find(p => p.stock_code === codigoItem);
+                let descProd = prodBase ? (prodBase.descripcion || codigoItem) : codigoItem;
                 let stockFisicoBase = prodBase ? (parseInt(prodBase.Stock) || 0) : 0;
 
-                // QtyAllocated Temporal calculado dinámicamente de lo que el vecino dejó flotando
                 let allocatedTemporalWeb = detallesPendientesWeb
                     .filter(d => d.StockCode === codigoItem)
                     .reduce((suma, d) => suma + (parseInt(d.Cantidad) || 0), 0);
 
-                // Tu fórmula maestra:
+                // Tu fórmula maestra
                 let disponibleAlMilisegundo = stockFisicoBase - allocatedTemporalWeb;
+                if (disponibleAlMilisegundo < 0) disponibleAlMilisegundo = 0;
 
+                // 🚨 ¡ALERTA! El stock real no abastece la cantidad solicitada
                 if (cantidadPedida > disponibleAlMilisegundo) {
-                    alert(`🛑 ¡UNO O MÁS DE SUS PRODUCTOS YA NO HAY EN STOCK!\n\n` +
-                          `El artículo [${codigoItem}] fue registrado por otro cliente de buena fe en este instante.\n` +
-                          `• Disponible real actual: ${disponibleAlMilisegundo < 0 ? 0 : disponibleAlMilisegundo} unidades.\n` +
-                          `• Intentas registrar: ${cantidadPedida} unidades.\n\n` +
-                          `Por favor, reduzca la cantidad o retire el artículo para procesar la orden.`);
-                    
-                    btn.disabled = false;
-                    btn.innerText = "💾 Confirmar y Enviar Pedido a Supabase";
-                    return; // Freno absoluto de emergencia. No se genera orden en la nube.
+                    huboCambiosEnCarrito = true;
+
+                    if (disponibleAlMilisegundo === 0) {
+                        // CASO A: Stock en cero total. Se remueve la línea de la tabla.
+                        productosAjustadosMensaje.push(`❌ ${descProd} [${codigoItem}]: Se agotó por completo y fue retirado de tu pedido.`);
+                        fila.remove(); 
+                    } else {
+                        // CASO B: Hay stock pero es parcial. Se ajusta al límite disponible.
+                        productosAjustadosMensaje.push(`⚠️ ${descProd} [${codigoItem}]: Solo quedaban ${disponibleAlMilisegundo} unidades disponibles. Ajustamos tu cantidad a este límite.`);
+                        
+                        // Actualizamos los atributos data de la fila para las operaciones posteriores
+                        fila.setAttribute('data-cantidad', disponibleAlMilisegundo);
+                        let nuevoSubtotal = disponibleAlMilisegundo * precioUnit;
+                        let nuevoIva = nuevoSubtotal * 0.15;
+                        fila.setAttribute('data-subtotal', nuevoSubtotal);
+                        fila.setAttribute('data-iva', nuevoIva);
+
+                        // Modificamos las celdas visibles en la tabla de cara al cliente
+                        let celdas = fila.getElementsByTagName('td');
+                        celdas[3].innerText = disponibleAlMilisegundo; 
+                        celdas[5].innerText = `$${nuevoIva.toFixed(2)}`; 
+                        celdas[6].innerText = `$${(nuevoSubtotal + nuevoIva).toFixed(2)}`; 
+                    }
                 }
             }
 
-            // --- SI PASA EL FILTRO DE CONCURRENCIA, PROCEDE A REGISTRAR LAS TABLAS ---
-            btn.innerText = "⚡ Generando orden de pedido...";
+            // 🛑 SI HUBO AJUSTES DE ÚLTIMO SEGUNDO, DETENEMOS LA OPERACIÓN Y AVISAMOS AL CLIENTE
+            if (huboCambiosEnCarrito) {
+                let mensajeFinal = `¡Estimado cliente! Mientras revisabas tu carrito, otros compradores adquirieron parte del stock disponible.\n\n` +
+                                   `Para garantizar la transparencia de tu compra, hemos actualizado automáticamente tu pedido:\n\n` +
+                                   productosAjustadosMensaje.join('\n') + `\n\n` +
+                                   `Por favor, verifica los nuevos totales en tu pantalla y presiona nuevamente el botón "Confirmar y Enviar Pedido" si estás de acuerdo.`;
+                
+                alert(mensajeFinal);
+                
+                btn.disabled = false;
+                btn.innerText = "💾 Confirmar y Enviar Pedido a Supabase";
+                return; // Freno absoluto. Rompe el flujo para que el cliente revise.
+            }
 
-            // 1. Calcular el secuencial correlativo manual
+            // --- SI TODO ESTÁ PERFECTO Y EL STOCK ES SÓLIDO, PROCEDE A GUARDAR LA ORDEN ---
+            btn.innerText = "⚡ Procesando tu orden de compra...";
+
+            // 1. Calcular el número secuencial correlativo manual
             const urlMaxOrder = `${VAL_URL}/rest/v1/SorMaster?select=SalesOrder&order=SalesOrder.desc&limit=1`;
             const resMax = await fetch(urlMaxOrder, {
                 method: "GET",
                 headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
             });
-            if(!resMax.ok) throw new Error("Error obteniendo correlativo.");
+            if(!resMax.ok) throw new Error("No pudimos generar el número correlativo de tu orden.");
             const dataMax = await resMax.json();
             
             let proximoSalesOrder = 1;
@@ -433,7 +467,7 @@
                 proximoSalesOrder = parseInt(dataMax[0].SalesOrder) + 1;
             }
 
-            // 2. Insertar Cabecera
+            // 2. Insertar la Cabecera de la orden
             const urlCabecera = `${VAL_URL}/rest/v1/SorMaster`;
             const resCabecera = await fetch(urlCabecera, {
                 method: "POST",
@@ -448,12 +482,14 @@
                 })
             });
 
-            if(!resCabecera.ok) throw new Error("Error al guardar en SorMaster.");
+            if(!resCabecera.ok) throw new Error("Tuvimos un inconveniente al registrar la cabecera de tu orden. Por favor intenta de nuevo.");
 
-            // 3. Estructurar líneas de detalle
+            // 3. Volver a leer las filas (por si algunas sufrieron mutación o eliminación en el bloque superior)
+            let filasFinales = document.querySelectorAll('#detallePedido tr');
             let itemsDetalle = [];
             let itemLine = 1;
-            filas.forEach(fila => {
+            
+            filasFinales.forEach(fila => {
                 itemsDetalle.push({
                     SalesOrder: proximoSalesOrder,
                     SalesOrderLine: itemLine,
@@ -467,7 +503,7 @@
                 itemLine++;
             });
 
-            // 4. Insertar detalles masivos
+            // 4. Insertar los detalles masivos
             const urlDetalle = `${VAL_URL}/rest/v1/SorDetail`;
             const resDetalle = await fetch(urlDetalle, {
                 method: "POST",
@@ -477,14 +513,14 @@
                 body: JSON.stringify(itemsDetalle)
             });
 
-            if(!resDetalle.ok) throw new Error("Error al guardar en SorDetail.");
+            if(!resDetalle.ok) throw new Error("No se pudieron registrar los productos de tu orden. Tu saldo no ha sido afectado.");
 
-            alert(`¡Pedido de Venta procesado con éxito!\nRegistrado a tu nombre con la Orden N°: ${proximoSalesOrder}`);
+            alert(`¡Tu pedido ha sido procesado con absoluto éxito!\n\nSe ha generado la Orden de Venta N°: ${proximoSalesOrder} a tu nombre.\n¡Muchas gracias por tu compra en Tecnocentro Vehículos!`);
             document.getElementById('detallePedido').innerHTML = "";
             lineaCorrelativa = 1;
 
         } catch (error) {
-            alert(`Fallo: ${error.message}`);
+            alert(`Estimado usuario, experimentamos un retraso en la comunicación: ${error.message}\nPor favor, verifica tu conexión e intenta confirmar nuevamente.`);
         } finally {
             btn.disabled = false;
             btn.innerText = "💾 Confirmar y Enviar Pedido a Supabase";
