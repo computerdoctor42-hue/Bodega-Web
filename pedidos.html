@@ -22,7 +22,6 @@
             color: var(--text-dark);
         }
 
-        /* Estilo simple para el nav interno */
         nav { background: #1e3a8a; padding: 10px 20px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between;}
         nav a { color: white; text-decoration: none; font-weight: bold; }
 
@@ -216,9 +215,8 @@
 
     let listaProductosReal = []; 
     let lineaCorrelativa = 1;
-    let ID_CLIENTE_AUTENTICADO = null; // Variable global para amarrar la orden
+    let ID_CLIENTE_AUTENTICADO = null;
 
-    // BLINDAJE: Seguridad de página de órdenes
     window.onload = function() {
         const sesion = sessionStorage.getItem("clienteLogueado");
         if (!sesion) {
@@ -228,14 +226,12 @@
         }
 
         const cliente = JSON.parse(sesion);
-        ID_CLIENTE_AUTENTICADO = cliente.Customer; // Su código numérico real de la BD
+        ID_CLIENTE_AUTENTICADO = cliente.Customer; 
         
-        // Colocamos visualmente los datos del cliente real logueado
         document.getElementById("lblCliente").innerHTML = `${cliente.Name.toUpperCase()} (CÓD: ${cliente.Customer || 'WEB_NUEVO'})`;
         document.getElementById("txtNavUsuario").innerText = `👤 Cliente: ${cliente.Name}`;
     };
 
-    // --- MANTIENE TODA TU EXCELENTE LÓGICA DE POPUP Y FILTROS ---
     async function abrirPopup() {
         document.getElementById('modalProductos').style.display = 'flex';
         document.getElementById('txtFiltroWeb').value = ''; 
@@ -355,16 +351,74 @@
         document.getElementById('txtCantidad').value = '1';
     }
 
-    // PROCESAMIENTO DINÁMICO CON EL CLIENTE LOGUEADO
+    // LÓGICA DE PROTECCIÓN MASIVA CON TU PROPUESTA DE ALLOCATED TEMPORAL
     async function finalizarPedidoWeb() {
         let filas = document.querySelectorAll('#detallePedido tr');
         if(filas.length === 0) { alert('El carrito está vacío.'); return; }
 
         const btn = document.getElementById('btnFinalizar');
         btn.disabled = true;
-        btn.innerText = "⚡ Insertando pedido de cliente autenticado...";
+        btn.innerText = "⚡ Validando existencias en el último milisegundo...";
 
         try {
+            // 🛡️ PASO 1: Extraer códigos únicos del carrito para auditar exclusivamente esos
+            let codigosEnCarrito = [];
+            filas.forEach(fila => {
+                let c = fila.getAttribute('data-codigo');
+                if(c && !codigosEnCarrito.includes(c)) codigosEnCarrito.push(c);
+            });
+
+            // 🛡️ PASO 2: Traer stock físico publicado directo de productos_web
+            const urlStocks = `${VAL_URL}/rest/v1/productos_web?stock_code=in.(${codigosEnCarrito.join(',')})`;
+            const resStocks = await fetch(urlStocks, {
+                method: "GET",
+                headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
+            });
+            if(!resStocks.ok) throw new Error("Error al recuperar existencias base.");
+            const productosBase = await resStocks.json();
+
+            // 🛡️ PASO 3: Inner Join para sumar la cantidad de los ítems en órdenes web que NO están descargadas (IsProcessed = 'N')
+            const urlPendientes = `${VAL_URL}/rest/v1/SorDetail?select=StockCode,Cantidad,SorMaster!inner(IsProcessed)&StockCode=in.(${codigosEnCarrito.join(',')})&SorMaster.IsProcessed=eq.N`;
+            const resPendientes = await fetch(urlPendientes, {
+                method: "GET",
+                headers: { "apikey": VAL_KEY, "Authorization": `Bearer ${VAL_KEY}` }
+            });
+            if(!resPendientes.ok) throw new Error("Error al auditar órdenes pendientes en cola.");
+            const detallesPendientesWeb = await resPendientes.json();
+
+            // 🛡️ PASO 4: Cruzar la información quirúrgicamente por artículo
+            for (let fila of filas) {
+                let codigoItem = fila.getAttribute('data-codigo');
+                let cantidadPedida = parseInt(fila.getAttribute('data-cantidad'));
+
+                // Stock base
+                let prodBase = productosBase.find(p => p.stock_code === codigoItem);
+                let stockFisicoBase = prodBase ? (parseInt(prodBase.Stock) || 0) : 0;
+
+                // QtyAllocated Temporal calculado dinámicamente de lo que el vecino dejó flotando
+                let allocatedTemporalWeb = detallesPendientesWeb
+                    .filter(d => d.StockCode === codigoItem)
+                    .reduce((suma, d) => suma + (parseInt(d.Cantidad) || 0), 0);
+
+                // Tu fórmula maestra:
+                let disponibleAlMilisegundo = stockFisicoBase - allocatedTemporalWeb;
+
+                if (cantidadPedida > disponibleAlMilisegundo) {
+                    alert(`🛑 ¡UNO O MÁS DE SUS PRODUCTOS YA NO HAY EN STOCK!\n\n` +
+                          `El artículo [${codigoItem}] fue registrado por otro cliente de buena fe en este instante.\n` +
+                          `• Disponible real actual: ${disponibleAlMilisegundo < 0 ? 0 : disponibleAlMilisegundo} unidades.\n` +
+                          `• Intentas registrar: ${cantidadPedida} unidades.\n\n` +
+                          `Por favor, reduzca la cantidad o retire el artículo para procesar la orden.`);
+                    
+                    btn.disabled = false;
+                    btn.innerText = "💾 Confirmar y Enviar Pedido a Supabase";
+                    return; // Freno absoluto de emergencia. No se genera orden en la nube.
+                }
+            }
+
+            // --- SI PASA EL FILTRO DE CONCURRENCIA, PROCEDE A REGISTRAR LAS TABLAS ---
+            btn.innerText = "⚡ Generando orden de pedido...";
+
             // 1. Calcular el secuencial correlativo manual
             const urlMaxOrder = `${VAL_URL}/rest/v1/SorMaster?select=SalesOrder&order=SalesOrder.desc&limit=1`;
             const resMax = await fetch(urlMaxOrder, {
@@ -379,7 +433,7 @@
                 proximoSalesOrder = parseInt(dataMax[0].SalesOrder) + 1;
             }
 
-            // 2. Insertar Cabecera usando el ID_CLIENTE_AUTENTICADO real del login
+            // 2. Insertar Cabecera
             const urlCabecera = `${VAL_URL}/rest/v1/SorMaster`;
             const resCabecera = await fetch(urlCabecera, {
                 method: "POST",
@@ -388,7 +442,7 @@
                 },
                 body: JSON.stringify({
                     SalesOrder: proximoSalesOrder,
-                    Customer: ID_CLIENTE_AUTENTICADO,  // ¡BINGO! ID Real del cliente logueado
+                    Customer: ID_CLIENTE_AUTENTICADO, 
                     Branch: 1, Emissionpoint: 1, WareHouse: "01",
                     IsCompleted: "N", IsCanceled: "N", IsProcessed: "N"
                 })
