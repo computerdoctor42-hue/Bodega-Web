@@ -93,22 +93,18 @@
         
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Variables de Control de Datos
         let todosLosProductos = [];
         let productosFiltrados = [];
         let paginaActual = 1;
         const registrosPorPagina = 100;
 
-        // Pinta la sección de la tabla correspondiente a la página actual
         function renderizarTabla() {
             const tabla = document.getElementById('tabla-productos');
             
-            // Calcular índices de corte para la paginación de 100 en 100
             const indiceInicio = (paginaActual - 1) * registrosPorPagina;
             const indiceFin = indiceInicio + registrosPorPagina;
             const registrosPagina = productosFiltrados.slice(indiceInicio, indiceFin);
 
-            // Actualizar textos de control e info abajo
             const total = productosFiltrados.length;
             const mostrandoHasta = Math.min(indiceFin, total);
             const mostrandoDesde = total === 0 ? 0 : indiceInicio + 1;
@@ -150,7 +146,6 @@
             }).join('');
         }
 
-        // Ejecuta el filtro por descripción en memoria sin recargar de base de datos
         function filtrarYRenderizar() {
             const termino = document.getElementById('input-busqueda').value.toLowerCase().trim();
             
@@ -162,18 +157,16 @@
                 );
             }
             
-            paginaActual = 1; // Resetea a la primera página al buscar
+            paginaActual = 1; 
             renderizarTabla();
         }
 
-        // Navegación de los botones Siguiente/Anterior
         function cambiarPagina(direccion) {
             paginaActual += direccion;
             renderizarTabla();
-            window.scrollTo({ top: 0, behavior: 'smooth' }); // Sube la pantalla con suavidad
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Carga inicial de datos limpia
         async function cargarProductosIniciales() {
             try {
                 const { data, error } = await supabase
@@ -182,7 +175,12 @@
 
                 if (error) throw error;
 
-                todosLosProductos = data || [];
+                // MODIFICACIÓN CLAVE: Ordenar el array local por la propiedad 'descripcion' de la A a la Z
+                todosLosProductos = (data || []).sort((a, b) => {
+                    const descA = (a.descripcion || '').toLowerCase();
+                    const descB = (b.descripcion || '').toLowerCase();
+                    return descA.localeCompare(descB);
+                });
                 
                 const badge = document.getElementById('status-badge');
                 badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-green-500 animate-pulse"></span> TRANSMISIÓN EN VIVO`;
@@ -198,7 +196,6 @@
             }
         }
 
-        // Escucha activa Realtime vía WebSockets
         function activarEscuchaTiempoReal() {
             supabase
                 .channel('cambios-inventario')
@@ -207,7 +204,6 @@
                     { event: '*', schema: 'public', table: 'productos_web' }, 
                     (payload) => {
                         console.log("¡Cambio detectado!", payload);
-                        // Captura la actualización instantánea y refresca la memoria local
                         cargarProductosIniciales();
                     }
                 )
