@@ -16,7 +16,7 @@
     <nav class="bg-white shadow-sm border-b border-gray-200 py-2 px-6 mb-8">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center">
-                <img src="logo expertos_2912025-1.png" alt="Expertos en Mantenimiento" class="h-16 w-auto object-contain">
+                <img src="logo%20expertos_2912025-1.png" alt="Expertos en Mantenimiento" class="h-16 w-auto object-contain" onerror="this.src='logo expertos_2912025-1.png'">
             </div>
             <ul class="flex space-x-6 text-gray-500 font-semibold text-sm uppercase tracking-wider">
                 <li><a href="#" class="hover:text-blue-600 transition">Inicio</a></li>
@@ -88,10 +88,11 @@
     </div>
 
     <script>
-        const BASE_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co/rest/v1/productos_web";
-        const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
+        const SUPABASE_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
         
-        const supabaseClient = supabase.createClient("https://gdyqwciwesxeqjbjlsxc.supabase.co", KEY);
+        // Inicialización del cliente oficial seguro para producción
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let todosLosProductos = [];
         let productosFiltrados = [];
@@ -167,34 +168,34 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // CARGA SIMULTÁNEA EN PARALELO (Trae lotes al mismo tiempo y los une ordenados)
+        // CARGA PARALELA USANDO EL CLIENTE OFICIAL (Evita bloqueos de seguridad de dominios cruzados en GitHub Pages)
         async function cargarProductosIniciales() {
             try {
                 const limiteBloque = 1000;
                 const promesas = [];
                 
-                // Generamos peticiones simultáneas para cubrir hasta 10,000 registros
+                // Generamos 10 llamadas en paralelo usando la librería de Supabase directa
                 for (let i = 0; i < 10; i++) {
                     const desde = i * limiteBloque;
-                    const url = `${BASE_URL}?select=stock_code,descripcion,Price,Stock&offset=${desde}&limit=${limiteBloque}`;
+                    const hasta = desde + limiteBloque - 1;
                     
                     promesas.push(
-                        fetch(url, {
-                            headers: { 
-                                "apikey": KEY, 
-                                "Authorization": "Bearer " + KEY 
-                            }
-                        }).then(res => {
-                            if (!res.ok) throw new Error("Fallo en lote");
-                            return res.json();
-                        })
+                        supabaseClient
+                            .from('productos_web')
+                            .select('stock_code, descripcion, Price, Stock')
+                            .range(desde, hasta)
+                            .then(res => {
+                                if (res.error) throw res.error;
+                                return res.data || [];
+                            })
                     );
                 }
 
+                // Esperamos la resolución simultánea de los hilos de red
                 const resultadosLotes = await Promise.all(promesas);
                 let datosUnificados = resultadosLotes.flat().filter(p => p !== null && p.stock_code);
 
-                // ORDENAMIENTO ALFABÉTICO (A - Z) EN MEMORIA
+                // ORDENAMIENTO ALFABÉTICO (A - Z) GARANTIZADO EN MEMORIA
                 datosUnificados.sort((a, b) => {
                     const descA = (a.descripcion || "").toLowerCase();
                     const descB = (b.descripcion || "").toLowerCase();
@@ -210,7 +211,7 @@
                 filtrarYRenderizar();
 
             } catch (error) {
-                console.error("Error cargando inventario:", error);
+                console.error("Error en la sincronización de inventario:", error);
                 const badge = document.getElementById('status-badge');
                 badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-red-600"></span> DESCONECTADO`;
                 badge.className = "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200";
@@ -224,7 +225,7 @@
                     'postgres_changes', 
                     { event: '*', schema: 'public', table: 'productos_web' }, 
                     (payload) => {
-                        console.log("Cambio en vivo detectado, actualizando catálogo...");
+                        console.log("Cambio en vivo detectado por WebSocket. Refrescando datos locales...");
                         cargarProductosIniciales();
                     }
                 )
