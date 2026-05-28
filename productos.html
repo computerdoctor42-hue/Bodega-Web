@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Catálogo RealTime - TROYABANANA</title>
+    <title>Catálogo RealTime - EXPERTOS EN MANTENIMIENTO</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-900">
 
-    <nav class="bg-white shadow-sm border-b border-gray-200 py-4 px-6 mb-8">
+    <nav class="bg-white shadow-sm border-b border-gray-200 py-2 px-6 mb-8">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="text-xl font-black text-blue-700 tracking-tighter uppercase">TARIBELA LUBRICADORA</div>
+            <div class="flex items-center">
+                <img src="logo_expertos.jpg" alt="Expertos en Mantenimiento" class="h-16 w-auto object-contain">
+            </div>
             <ul class="flex space-x-6 text-gray-500 font-semibold text-sm uppercase tracking-wider">
                 <li><a href="#" class="hover:text-blue-600 transition">Inicio</a></li>
                 <li><a href="#" class="text-blue-600">Productos</a></li>
@@ -35,6 +38,17 @@
             </div>
         </header>
 
+        <div class="mb-6">
+            <div class="relative max-w-md shadow-sm rounded-xl">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="input-busqueda" oninput="filtrarYRenderizar()" placeholder="Buscar por descripción..." class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm font-semibold text-gray-700 placeholder-gray-400 transition-all">
+            </div>
+        </div>
+
         <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-200">
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
@@ -50,11 +64,21 @@
                         <tr>
                             <td colspan="4" class="p-20 text-center">
                                 <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
-                                <p class="text-gray-400 font-medium text-sm tracking-wide">Obteniendo datos de Supabase...</p>
+                                <p class="text-gray-400 font-medium text-sm tracking-wide">Conectando al canal de tiempo real...</p>
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div class="text-sm font-bold text-gray-500" id="info-paginacion">
+                    Mostrando 0 a 0 de 0 productos
+                </div>
+                <div class="inline-flex space-x-2">
+                    <button id="btn-prev" onclick="cambiarPagina(-1)" class="px-4 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">Anterior</button>
+                    <button id="btn-next" onclick="cambiarPagina(1)" class="px-4 py-2 text-sm font-bold bg-white border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">Siguiente</button>
+                </div>
             </div>
         </div>
 
@@ -64,76 +88,136 @@
     </div>
 
     <script>
-        // Configuración de Supabase
-        const URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co/rest/v1/productos_web";
-        const KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
+        const SUPABASE_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        async function cargarProductos() {
+        // Variables de Control de Datos
+        let todosLosProductos = [];
+        let productosFiltrados = [];
+        let paginaActual = 1;
+        const registrosPorPagina = 100;
+
+        // Pinta la sección de la tabla correspondiente a la página actual
+        function renderizarTabla() {
+            const tabla = document.getElementById('tabla-productos');
+            
+            // Calcular índices de corte para la paginación de 100 en 100
+            const indiceInicio = (paginaActual - 1) * registrosPorPagina;
+            const indiceFin = indiceInicio + registrosPorPagina;
+            const registrosPagina = productosFiltrados.slice(indiceInicio, indiceFin);
+
+            // Actualizar textos de control e info abajo
+            const total = productosFiltrados.length;
+            const mostrandoHasta = Math.min(indiceFin, total);
+            const mostrandoDesde = total === 0 ? 0 : indiceInicio + 1;
+            
+            document.getElementById('info-paginacion').innerText = `Mostrando ${mostrandoDesde} a ${mostrandoHasta} de ${total} productos`;
+            document.getElementById('btn-prev').disabled = (paginaActual === 1);
+            document.getElementById('btn-next').disabled = (indiceFin >= total);
+
+            if (registrosPagina.length === 0) {
+                tabla.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-gray-400 italic">Naranja naranja naranja: No se encontraron registros disponibles.</td></tr>';
+                return;
+            }
+
+            tabla.innerHTML = registrosPagina.map(p => {
+                const precioOriginal = parseFloat(p.Price) || 0; 
+                const stockReal = parseInt(p.Stock) || 0;
+                const precioIVA = (precioOriginal * 1.15).toFixed(2);
+                
+                let stockColor = "text-green-600";
+                if (stockReal <= 0) stockColor = "text-red-600";
+                else if (stockReal <= 5) stockColor = "text-yellow-500";
+
+                return `
+                    <tr class="hover:bg-blue-50/40 transition-all group">
+                        <td class="p-5 font-mono text-xs text-blue-600 font-black tracking-tighter">${p.stock_code}</td>
+                        <td class="p-5">
+                            <div class="text-gray-900 font-bold group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</div>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Calidad Taribela</div>
+                        </td>
+                        <td class="p-5 text-center font-black text-xl ${stockColor}">
+                            ${stockReal}
+                        </td>
+                        <td class="p-5 text-right">
+                            <span class="text-xs font-bold text-gray-300 mr-0.5">$</span>
+                            <span class="text-xl font-black text-gray-900 tracking-tighter">${precioIVA}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Ejecuta el filtro por descripción en memoria sin recargar de base de datos
+        function filtrarYRenderizar() {
+            const termino = document.getElementById('input-busqueda').value.toLowerCase().trim();
+            
+            if (termino === "") {
+                productosFiltrados = [...todosLosProductos];
+            } else {
+                productosFiltrados = todosLosProductos.filter(p => 
+                    p.descripcion && p.descripcion.toLowerCase().includes(termino)
+                );
+            }
+            
+            paginaActual = 1; // Resetea a la primera página al buscar
+            renderizarTabla();
+        }
+
+        // Navegación de los botones Siguiente/Anterior
+        function cambiarPagina(direccion) {
+            paginaActual += direccion;
+            renderizarTabla();
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Sube la pantalla con suavidad
+        }
+
+        // Carga inicial de datos limpia
+        async function cargarProductosIniciales() {
             try {
-                const res = await fetch(URL, {
-                    headers: { 
-                        "apikey": KEY, 
-                        "Authorization": "Bearer " + KEY 
-                    }
-                });
-                
-                if (!res.ok) throw new Error("Fallo de Red");
+                const { data, error } = await supabase
+                    .from('productos_web')
+                    .select('stock_code, descripcion, Price, Stock');
 
-                const productos = await res.json();
-                const tabla = document.getElementById('tabla-productos');
-                const badge = document.getElementById('status-badge');
+                if (error) throw error;
+
+                todosLosProductos = data || [];
                 
-                // Indicador de estado ONLINE
-                badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-green-500 animate-pulse"></span> SISTEMA ONLINE`;
+                const badge = document.getElementById('status-badge');
+                badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-green-500 animate-pulse"></span> TRANSMISIÓN EN VIVO`;
                 badge.className = "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-green-50 text-green-700 border border-green-200";
 
-                if (productos.length === 0) {
-                    tabla.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-gray-400 italic">No hay registros disponibles.</td></tr>';
-                    return;
-                }
-
-                // Generación de filas usando Price y Stock (Nombres exactos de BD)
-                tabla.innerHTML = productos.map(p => {
-                    // Mapeo manual de campos (Case Sensitive)
-                    const precioOriginal = parseFloat(p.Price) || 0; 
-                    const stockReal = parseInt(p.Stock) || 0;
-                    
-                    const precioIVA = (precioOriginal * 1.15).toFixed(2);
-                    
-                    // Lógica de color para el número de stock
-                    let stockColor = "text-green-600";
-                    if (stockReal <= 0) stockColor = "text-red-600";
-                    else if (stockReal <= 5) stockColor = "text-yellow-500";
-
-                    return `
-                        <tr class="hover:bg-blue-50/40 transition-all group">
-                            <td class="p-5 font-mono text-xs text-blue-600 font-black tracking-tighter">${p.stock_code}</td>
-                            <td class="p-5">
-                                <div class="text-gray-900 font-bold group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</div>
-                                <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Calidad Taribela</div>
-                            </td>
-                            <td class="p-5 text-center font-black text-xl ${stockColor}">
-                                ${stockReal}
-                            </td>
-                            <td class="p-5 text-right">
-                                <span class="text-xs font-bold text-gray-300 mr-0.5">$</span>
-                                <span class="text-xl font-black text-gray-900 tracking-tighter">${precioIVA}</span>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                filtrarYRenderizar();
 
             } catch (error) {
-                console.error(error);
+                console.error("Error al cargar datos de Supabase:", error);
                 const badge = document.getElementById('status-badge');
-                badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-red-600"></span> ERROR`;
+                badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-red-600"></span> DESCONECTADO`;
                 badge.className = "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200";
             }
         }
 
-        // Ejecución inicial y temporizador
-        cargarProductos();
-        setInterval(cargarProductos, 30000);
+        // Escucha activa Realtime vía WebSockets
+        function activarEscuchaTiempoReal() {
+            supabase
+                .channel('cambios-inventario')
+                .on(
+                    'postgres_changes', 
+                    { event: '*', schema: 'public', table: 'productos_web' }, 
+                    (payload) => {
+                        console.log("¡Cambio detectado!", payload);
+                        // Captura la actualización instantánea y refresca la memoria local
+                        cargarProductosIniciales();
+                    }
+                )
+                .subscribe();
+        }
+
+        window.onload = function() {
+            cargarProductosIniciales();
+            activarEscuchaTiempoReal();
+        };
     </script>
 </body>
 </html>
