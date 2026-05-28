@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catálogo RealTime - EXPERTOS EN MANTENIMIENTO</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700;900&display=swap');
@@ -16,7 +16,7 @@
     <nav class="bg-white shadow-sm border-b border-gray-200 py-2 px-6 mb-8">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center">
-                <img src="logo%20expertos_2912025-1.png" alt="Expertos en Mantenimiento" class="h-16 w-auto object-contain" onerror="this.src='logo expertos_2912025-1.png'">
+                <img src="logo_expertos_2912025-1.png" alt="Expertos en Mantenimiento" class="h-16 w-auto object-contain">
             </div>
             <ul class="flex space-x-6 text-gray-500 font-semibold text-sm uppercase tracking-wider">
                 <li><a href="#" class="hover:text-blue-600 transition">Inicio</a></li>
@@ -64,7 +64,7 @@
                         <tr>
                             <td colspan="4" class="p-20 text-center">
                                 <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
-                                <p class="text-gray-400 font-medium text-sm tracking-wide">Cargando catálogo completo de la bodega en paralelo...</p>
+                                <p class="text-gray-400 font-medium text-sm tracking-wide">Descargando catálogo completo en vivo...</p>
                             </td>
                         </tr>
                     </tbody>
@@ -91,8 +91,8 @@
         const SUPABASE_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
         const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
         
-        // Inicialización del cliente oficial seguro para producción
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Inicializar usando el espacio de nombres de la librería UMD global
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let todosLosProductos = [];
         let productosFiltrados = [];
@@ -168,13 +168,13 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // CARGA PARALELA USANDO EL CLIENTE OFICIAL (Evita bloqueos de seguridad de dominios cruzados en GitHub Pages)
+        // CONTROL DE CARGA ASÍNCRONA ROBUSTA PARA INTERNET
         async function cargarProductosIniciales() {
             try {
                 const limiteBloque = 1000;
                 const promesas = [];
                 
-                // Generamos 10 llamadas en paralelo usando la librería de Supabase directa
+                // Pedimos 10 bloques (Hasta 10,000 registros en total)
                 for (let i = 0; i < 10; i++) {
                     const desde = i * limiteBloque;
                     const hasta = desde + limiteBloque - 1;
@@ -191,11 +191,10 @@
                     );
                 }
 
-                // Esperamos la resolución simultánea de los hilos de red
                 const resultadosLotes = await Promise.all(promesas);
                 let datosUnificados = resultadosLotes.flat().filter(p => p !== null && p.stock_code);
 
-                // ORDENAMIENTO ALFABÉTICO (A - Z) GARANTIZADO EN MEMORIA
+                // ORDENAMIENTO ALFABÉTICO INMEDIATO (A - Z)
                 datosUnificados.sort((a, b) => {
                     const descA = (a.descripcion || "").toLowerCase();
                     const descB = (b.descripcion || "").toLowerCase();
@@ -211,7 +210,7 @@
                 filtrarYRenderizar();
 
             } catch (error) {
-                console.error("Error en la sincronización de inventario:", error);
+                console.error("Error al descargar el catálogo:", error);
                 const badge = document.getElementById('status-badge');
                 badge.innerHTML = `<span class="w-2.5 h-2.5 mr-2 rounded-full bg-red-600"></span> DESCONECTADO`;
                 badge.className = "inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200";
@@ -225,7 +224,6 @@
                     'postgres_changes', 
                     { event: '*', schema: 'public', table: 'productos_web' }, 
                     (payload) => {
-                        console.log("Cambio en vivo detectado por WebSocket. Refrescando datos locales...");
                         cargarProductosIniciales();
                     }
                 )
