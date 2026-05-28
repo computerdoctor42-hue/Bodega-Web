@@ -38,14 +38,23 @@
             </div>
         </header>
 
-        <div class="mb-6">
-            <div class="relative max-w-md shadow-sm rounded-xl">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="relative shadow-sm rounded-xl">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
-                <input type="text" id="input-busqueda" oninput="filtrarYRenderizar()" placeholder="Buscar por descripción..." class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm font-semibold text-gray-700 placeholder-gray-400 transition-all">
+                <input type="text" id="input-busqueda-1" oninput="filtrarYRenderizar()" placeholder="Filtro principal..." class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm font-semibold text-gray-700 placeholder-gray-400 transition-all">
+            </div>
+
+            <div class="relative shadow-sm rounded-xl">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                </div>
+                <input type="text" id="input-busqueda-2" oninput="filtrarYRenderizar()" placeholder="Filtro secundario..." class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm font-semibold text-gray-700 placeholder-gray-400 transition-all">
             </div>
         </div>
 
@@ -91,7 +100,6 @@
         const SUPABASE_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
         const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
         
-        // Inicializar usando el espacio de nombres de la librería UMD global
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let todosLosProductos = [];
@@ -115,7 +123,7 @@
             document.getElementById('btn-next').disabled = (indiceFin >= total);
 
             if (registrosPagina.length === 0) {
-                tabla.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-gray-400 italic">No se encontraron registros.</td></tr>';
+                tabla.innerHTML = '<tr><td colspan="4" class="p-20 text-center text-gray-400 italic">No se encontraron registros para esta combinación de filtros.</td></tr>';
                 return;
             }
 
@@ -133,7 +141,6 @@
                         <td class="p-5 font-mono text-xs text-blue-600 font-black tracking-tighter">${p.stock_code}</td>
                         <td class="p-5">
                             <div class="text-gray-900 font-bold group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</div>
-                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Calidad JEC</div>
                         </td>
                         <td class="p-5 text-center font-black text-xl ${stockColor}">
                             ${stockReal}
@@ -147,15 +154,28 @@
             }).join('');
         }
 
+        // LÓGICA DE DOBLE FILTRADO ACUMULATIVO INTEGRAL (Ambos buscan en descripcion y LongDescription)
         function filtrarYRenderizar() {
-            const termino = document.getElementById('input-busqueda').value.toLowerCase().trim();
+            const t1 = document.getElementById('input-busqueda-1').value.toLowerCase().trim();
+            const t2 = document.getElementById('input-busqueda-2').value.toLowerCase().trim();
             
-            if (termino === "") {
-                productosFiltrados = [...todosLosProductos];
-            } else {
-                productosFiltrados = todosLosProductos.filter(p => 
-                    p.descripcion && p.descripcion.toLowerCase().includes(termino)
+            // Filtro 1
+            let primeraFase = todosLosProductos;
+            if (t1 !== "") {
+                primeraFase = todosLosProductos.filter(p => 
+                    (p.descripcion && p.descripcion.toLowerCase().includes(t1)) ||
+                    (p.LongDescription && p.LongDescription.toLowerCase().includes(t1))
                 );
+            }
+            
+            // Filtro 2 (Mantiene la búsqueda en ambos campos en el trasfondo)
+            if (t2 !== "") {
+                productosFiltrados = primeraFase.filter(p => 
+                    (p.descripcion && p.descripcion.toLowerCase().includes(t2)) ||
+                    (p.LongDescription && p.LongDescription.toLowerCase().includes(t2))
+                );
+            } else {
+                productosFiltrados = primeraFase;
             }
             
             paginaActual = 1; 
@@ -168,13 +188,11 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // CONTROL DE CARGA ASÍNCRONA ROBUSTA PARA INTERNET
         async function cargarProductosIniciales() {
             try {
                 const limiteBloque = 1000;
                 const promesas = [];
                 
-                // Pedimos 10 bloques (Hasta 10,000 registros en total)
                 for (let i = 0; i < 10; i++) {
                     const desde = i * limiteBloque;
                     const hasta = desde + limiteBloque - 1;
@@ -182,7 +200,7 @@
                     promesas.push(
                         supabaseClient
                             .from('productos_web')
-                            .select('stock_code, descripcion, Price, Stock')
+                            .select('stock_code, descripcion, Price, Stock, LongDescription')
                             .range(desde, hasta)
                             .then(res => {
                                 if (res.error) throw res.error;
@@ -194,7 +212,6 @@
                 const resultadosLotes = await Promise.all(promesas);
                 let datosUnificados = resultadosLotes.flat().filter(p => p !== null && p.stock_code);
 
-                // ORDENAMIENTO ALFABÉTICO INMEDIATO (A - Z)
                 datosUnificados.sort((a, b) => {
                     const descA = (a.descripcion || "").toLowerCase();
                     const descB = (b.descripcion || "").toLowerCase();
