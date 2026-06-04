@@ -98,12 +98,12 @@
     </div>
 
     <div id="popup-imagen" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="cerrarPopup()">
-        <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-4 flex flex-col items-center" style="width: 450px;" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-4 flex flex-col items-center" style="width: 650px;" onclick="event.stopPropagation()">
             <div class="w-full flex justify-between items-center mb-2">
                 <h3 id="popup-titulo" class="text-sm font-bold text-gray-900 truncate pr-4"></h3>
                 <button onclick="cerrarPopup()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">&times;</button>
             </div>
-            <div class="bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100" style="width: 400px; height: 400px;">
+            <div class="bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100" style="width: 600px; height: 600px;">
                 <img id="popup-img-tag" src="" alt="Producto Ampliado" class="w-full h-full object-contain">
             </div>
         </div>
@@ -114,8 +114,6 @@
         const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // URL base de tu bucket público en Supabase Storage (asegúrate de crear el bucket llamado 'productos-imagenes')
         const URL_STORAGE = `${SUPABASE_URL}/storage/v1/object/public/productos-imagenes/`;
 
         let todosLosProductos = [];
@@ -152,16 +150,22 @@
                 if (stockReal <= 0) stockColor = "text-red-600";
                 else if (stockReal <= 5) stockColor = "text-yellow-500";
 
-                // Construimos la ruta usando el código único del producto (ej: GL15W40.jpg)
-                // Le metemos un timestamp (?t=...) para romper el caché del navegador si C# la cambia mañana
-                const urlImagen = `${URL_STORAGE}${p.stock_code}.jpg?t=${new Date().getTime()}`;
+                let nombreFotoBase = (p.Foto || p.stock_code || "").toString().trim();
+                nombreFotoBase = nombreFotoBase.replace(/\.[^/.]+$/, "");
+
+                const urlBase = `${URL_STORAGE}${nombreFotoBase}`;
+                const timestamp = `?t=${new Date().getTime()}`;
+                const urlInicial = `${urlBase}.jpg${timestamp}`;
 
                 return `
                     <tr class="hover:bg-blue-50/40 transition-all group">
                         <td class="p-3 w-20 text-center">
                             <div class="w-12 h-12 bg-white rounded-lg border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-transform"
-                                 onclick="abrirPopup('${urlImagen}', '${p.descripcion || p.stock_code}')">
-                                <img src="${urlImagen}" alt="Foto" class="w-full h-full object-contain" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23d1d5db\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\' /></svg>'">
+                                 onclick="abrirPopup(this.querySelector('img').src, '${p.descripcion || p.stock_code}')">
+                                <img src="${urlInicial}" alt="Foto" class="w-full h-full object-contain"
+                                     data-ext-index="0"
+                                     data-base-url="${urlBase}"
+                                     onerror="rotarExtensiones(this)">
                             </div>
                         </td>
                         <td class="p-5 font-mono text-xs text-blue-600 font-black tracking-tighter">${p.stock_code}</td>
@@ -180,7 +184,22 @@
             }).join('');
         }
 
-        // FUNCIONES PARA CONTROLAR EL POPUP
+        function rotarExtensiones(img) {
+            const extensiones = [".JPG", ".jpeg", ".JPEG", ".png", ".PNG"];
+            let currentIndex = parseInt(img.getAttribute('data-ext-index'));
+            const baseUrl = img.getAttribute('data-base-url');
+            const timestamp = `?t=${new Date().getTime()}`;
+
+            if (currentIndex < extensiones.length) {
+                const proximaExt = extensiones[currentIndex];
+                img.setAttribute('data-ext-index', currentIndex + 1);
+                img.src = `${baseUrl}${proximaExt}${timestamp}`;
+            } else {
+                img.onerror = null; 
+                img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d1d5db'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' /></svg>";
+            }
+        }
+
         function abrirPopup(url, titulo) {
             document.getElementById('popup-titulo').innerText = titulo;
             document.getElementById('popup-img-tag').src = url;
@@ -192,7 +211,6 @@
             document.getElementById('popup-img-tag').src = "";
         }
 
-        // LÓGICA DE DOBLE FILTRADO ACUMULATIVO INTEGRAL
         function filtrarYRenderizar() {
             const t1 = document.getElementById('input-busqueda-1').value.toLowerCase().trim();
             const t2 = document.getElementById('input-busqueda-2').value.toLowerCase().trim();
@@ -236,7 +254,7 @@
                     promesas.push(
                         supabaseClient
                             .from('productos_web')
-                            .select('stock_code, descripcion, Price, Stock, LongDescription')
+                            .select('stock_code, descripcion, Price, Stock, LongDescription, Foto')
                             .range(desde, hasta)
                             .then(res => {
                                 if (res.error) throw res.error;
