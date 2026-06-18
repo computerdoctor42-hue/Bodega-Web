@@ -38,7 +38,7 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-center">
             <div class="relative shadow-sm rounded-xl">
                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -56,10 +56,27 @@
                 </div>
                 <input type="text" id="input-busqueda-2" oninput="filtrarYRenderizar()" placeholder="Filtro secundario..." class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm font-semibold text-gray-700 placeholder-gray-400 transition-all">
             </div>
+
+            <div class="flex items-center pl-2">
+                <label class="relative inline-flex items-center cursor-pointer select-none text-sm font-bold text-gray-700">
+                    <input type="checkbox" id="check-zero-stock" checked onchange="filtrarYRenderizar()" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 mr-2">
+                    Incluir productos con cero stock
+                </label>
+            </div>
+
+            <div class="relative shadow-sm rounded-xl">
+                <select id="select-vista" onchange="filtrarYRenderizar()" class="block w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm font-bold text-gray-700 transition-all appearance-none cursor-pointer">
+                    <option value="lista">Vista: Detalle (Lista)</option>
+                    <option value="cuadricula">Vista: Cuadrícula (Bloques)</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
         </div>
 
-        <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-200">
-            <div class="overflow-x-auto">
+        <div id="contenedor-principal" class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-200 p-0">
+            <div id="vista-tabla-wrapper" class="overflow-x-auto hidden">
                 <table class="w-full text-left">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
@@ -70,15 +87,17 @@
                             <th class="p-5 text-xs font-bold text-gray-400 uppercase tracking-widest text-right">Precio Final (+IVA)</th>
                         </tr>
                     </thead>
-                    <tbody id="tabla-productos" class="divide-y divide-gray-100">
-                        <tr>
-                            <td colspan="5" class="p-20 text-center">
-                                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
-                                <p class="text-gray-400 font-medium text-sm tracking-wide">Descargando catálogo completo en vivo...</p>
-                            </td>
-                        </tr>
-                    </tbody>
+                    <tbody id="tabla-productos" class="divide-y divide-gray-100"></tbody>
                 </table>
+            </div>
+
+            <div id="vista-cuadricula-wrapper" class="p-6 hidden">
+                <div id="grid-productos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+            </div>
+
+            <div id="loader-productos" class="p-20 text-center">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
+                <p class="text-gray-400 font-medium text-sm tracking-wide">Descargando catálogo completo en vivo...</p>
             </div>
 
             <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -121,9 +140,15 @@
         let paginaActual = 1;
         const registrosPorPagina = 100;
 
-        function renderizarTabla() {
-            const tabla = document.getElementById('tabla-productos');
-            
+        // Renderizado general controlado según el estado del combobox de vistas
+        function renderizarCatalogo() {
+            const vistaSeleccionada = document.getElementById('select-vista').value;
+            const wrapperTabla = document.getElementById('vista-tabla-wrapper');
+            const wrapperGrid = document.getElementById('vista-cuadricula-wrapper');
+            const loader = document.getElementById('loader-productos');
+
+            loader.classList.add('hidden');
+
             const indiceInicio = (paginaActual - 1) * registrosPorPagina;
             const indiceFin = indiceInicio + registrosPorPagina;
             const registrosPagina = productosFiltrados.slice(indiceInicio, indiceFin);
@@ -136,6 +161,20 @@
             document.getElementById('btn-prev').disabled = (paginaActual === 1);
             document.getElementById('btn-next').disabled = (indiceFin >= total);
 
+            if (vistaSeleccionada === 'lista') {
+                wrapperGrid.classList.add('hidden');
+                wrapperTabla.classList.remove('hidden');
+                renderizarModoLista(registrosPagina);
+            } else {
+                wrapperTabla.classList.add('hidden');
+                wrapperGrid.classList.remove('hidden');
+                renderizarModoCuadricula(registrosPagina);
+            }
+        }
+
+        // Renderizado en formato tradicional de filas de tabla
+        function renderizarModoLista(registrosPagina) {
+            const tabla = document.getElementById('tabla-productos');
             if (registrosPagina.length === 0) {
                 tabla.innerHTML = '<tr><td colspan="5" class="p-20 text-center text-gray-400 italic">No se encontraron registros para esta combinación de filtros.</td></tr>';
                 return;
@@ -154,8 +193,7 @@
                 nombreFotoBase = nombreFotoBase.replace(/\.[^/.]+$/, "");
 
                 const urlBase = `${URL_STORAGE}${nombreFotoBase}`;
-                const timestamp = `?t=${new Date().getTime()}`;
-                const urlInicial = `${urlBase}.jpg${timestamp}`;
+                const urlInicial = `${urlBase}.jpg`;
 
                 return `
                     <tr class="hover:bg-blue-50/40 transition-all group">
@@ -184,6 +222,58 @@
             }).join('');
         }
 
+        // Renderizado en formato de cuadrícula/tarjetas simétricas
+        function renderizarModoCuadricula(registrosPagina) {
+            const grid = document.getElementById('grid-productos');
+            if (registrosPagina.length === 0) {
+                grid.innerHTML = '<div class="col-span-full p-20 text-center text-gray-400 italic">No se encontraron registros para esta combinación de filtros.</div>';
+                return;
+            }
+
+            grid.innerHTML = registrosPagina.map(p => {
+                const precioOriginal = parseFloat(p.Price) || 0;
+                const stockReal = parseInt(p.Stock) || 0;
+                const precioIVA = (precioOriginal * 1.15).toFixed(2);
+
+                let stockColor = "text-green-600 border-green-200 bg-green-50";
+                if (stockReal <= 0) stockColor = "text-red-600 border-red-200 bg-red-50";
+                else if (stockReal <= 5) stockColor = "text-yellow-600 border-yellow-200 bg-yellow-50";
+
+                let nombreFotoBase = (p.Foto || p.stock_code || "").toString().trim();
+                nombreFotoBase = nombreFotoBase.replace(/\.[^/.]+$/, "");
+
+                const urlBase = `${URL_STORAGE}${nombreFotoBase}`;
+                const urlInicial = `${urlBase}.jpg`;
+
+                return `
+                    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col p-4 group">
+                        <div class="w-full aspect-square bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 cursor-pointer mb-4 hover:scale-[1.02] transition-transform"
+                             onclick="abrirPopup(this.querySelector('img').src, '${p.descripcion || p.stock_code}')">
+                            <img src="${urlInicial}" alt="Foto" class="w-full h-full object-contain p-2"
+                                 data-ext-index="0"
+                                 data-base-url="${urlBase}"
+                                 onerror="rotarExtensiones(this)">
+                        </div>
+                        <div class="flex-1 flex flex-col justify-between">
+                            <div class="mb-3">
+                                <div class="text-xs font-mono text-blue-600 font-black tracking-tighter uppercase mb-1">${p.stock_code}</div>
+                                <h4 class="text-sm font-bold text-gray-900 line-clamp-2 group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</h4>
+                            </div>
+                            <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+                                <div class="px-2.5 py-0.5 rounded-md border text-xs font-black ${stockColor}">
+                                    Stock: ${stockReal}
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-2xl font-black text-gray-900 tracking-tighter">$${precioIVA}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Conmutación recursiva de extensiones alternativas en caso de fallo de carga original
         function rotarExtensiones(img) {
             const extensiones = [".JPG", ".jpeg", ".JPEG", ".png", ".PNG"];
             let currentIndex = parseInt(img.getAttribute('data-ext-index'));
@@ -193,7 +283,10 @@
             if (currentIndex < extensiones.length) {
                 const proximaExt = extensiones[currentIndex];
                 img.setAttribute('data-ext-index', currentIndex + 1);
-                img.src = `${baseUrl}${proximaExt}${timestamp}`;
+                img.src = `${baseUrl}${proximaExt}`;
+            } else if (currentIndex === extensiones.length) {
+                img.setAttribute('data-ext-index', currentIndex + 1);
+                img.src = `${baseUrl}.jpg${timestamp}`;
             } else {
                 img.onerror = null; 
                 img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d1d5db'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' /></svg>";
@@ -214,31 +307,37 @@
         function filtrarYRenderizar() {
             const t1 = document.getElementById('input-busqueda-1').value.toLowerCase().trim();
             const t2 = document.getElementById('input-busqueda-2').value.toLowerCase().trim();
+            const incluirCeroStock = document.getElementById('check-zero-stock').checked;
             
-            let primeraFase = todosLosProductos;
+            let datosFiltrados = todosLosProductos;
+
+            if (!incluirCeroStock) {
+                datosFiltrados = datosFiltrados.filter(p => (parseInt(p.Stock) || 0) > 0);
+            }
+
             if (t1 !== "") {
-                primeraFase = todosLosProductos.filter(p => 
+                datosFiltrados = datosFiltrados.filter(p => 
                     (p.descripcion && p.descripcion.toLowerCase().includes(t1)) ||
                     (p.LongDescription && p.LongDescription.toLowerCase().includes(t1))
                 );
             }
             
             if (t2 !== "") {
-                productosFiltrados = primeraFase.filter(p => 
+                productosFiltrados = datosFiltrados.filter(p => 
                     (p.descripcion && p.descripcion.toLowerCase().includes(t2)) ||
                     (p.LongDescription && p.LongDescription.toLowerCase().includes(t2))
                 );
             } else {
-                productosFiltrados = primeraFase;
+                productosFiltrados = datosFiltrados;
             }
             
             paginaActual = 1; 
-            renderizarTabla();
+            renderizarCatalogo();
         }
 
         function cambiarPagina(direccion) {
             paginaActual += direccion;
-            renderizarTabla();
+            renderizarCatalogo();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
