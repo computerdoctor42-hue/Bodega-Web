@@ -76,6 +76,7 @@
         </div>
 
         <div id="contenedor-principal" class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-200 p-0">
+            
             <div id="vista-tabla-wrapper" class="overflow-x-auto hidden">
                 <table class="w-full text-left">
                     <thead class="bg-gray-50 border-b border-gray-200">
@@ -133,14 +134,24 @@
         const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const URL_STORAGE = `${SUPABASE_URL}/storage/v1/object/public/productos-imagenes/`;
+        const URL_STORAGE = `${SUPABASE_URL}/storage/v1/object/public/productos-imagenesMarcoJr/`;
 
         let todosLosProductos = [];
         let productosFiltrados = [];
         let paginaActual = 1;
         const registrosPorPagina = 100;
 
-        // Renderizado general controlado según el estado del combobox de vistas
+        // CORRECCIÓN TOTAL: Respeta el nombre de la foto tal cual viene, solo quitando espacios muertos
+        function obtenerNombreFotoLimpio(registro) {
+            let textoFoto = (registro.Foto || "").toString().trim();
+            
+            // Si está vacío, usamos el stock_code como plan de respaldo
+            if (!textoFoto && registro.stock_code) {
+                textoFoto = registro.stock_code.toString().trim();
+            }
+            return textoFoto;
+        }
+
         function renderizarCatalogo() {
             const vistaSeleccionada = document.getElementById('select-vista').value;
             const wrapperTabla = document.getElementById('vista-tabla-wrapper');
@@ -172,11 +183,10 @@
             }
         }
 
-        // Renderizado en formato tradicional de filas de tabla
         function renderizarModoLista(registrosPagina) {
             const tabla = document.getElementById('tabla-productos');
             if (registrosPagina.length === 0) {
-                tabla.innerHTML = '<tr><td colspan="5" class="p-20 text-center text-gray-400 italic">No se encontraron registros para esta combinación de filtros.</td></tr>';
+                tabla.innerHTML = '<tr><td colspan="5" class="p-20 text-center text-gray-400 italic">No se encontraron registros.</td></tr>';
                 return;
             }
 
@@ -184,29 +194,24 @@
                 const precioOriginal = parseFloat(p.Price) || 0; 
                 const stockReal = parseInt(p.Stock) || 0;
                 const precioIVA = (precioOriginal * 1.15).toFixed(2);
+                const codigoReal = p.stock_code || "";
                 
                 let stockColor = "text-green-600";
                 if (stockReal <= 0) stockColor = "text-red-600";
                 else if (stockReal <= 5) stockColor = "text-yellow-500";
 
-                let nombreFotoBase = (p.Foto || p.stock_code || "").toString().trim();
-                nombreFotoBase = nombreFotoBase.replace(/\.[^/.]+$/, "");
-
-                const urlBase = `${URL_STORAGE}${nombreFotoBase}`;
-                const urlInicial = `${urlBase}.jpg`;
+                const fotoLimpia = obtenerNombreFotoLimpio(p);
+                const urlCompleta = fotoLimpia ? `${URL_STORAGE}${encodeURIComponent(fotoLimpia)}` : "";
 
                 return `
                     <tr class="hover:bg-blue-50/40 transition-all group">
                         <td class="p-3 w-20 text-center">
                             <div class="w-12 h-12 bg-white rounded-lg border border-gray-200 overflow-hidden flex items-center justify-center cursor-pointer shadow-sm hover:scale-105 transition-transform"
-                                 onclick="abrirPopup(this.querySelector('img').src, '${p.descripcion || p.stock_code}')">
-                                <img src="${urlInicial}" alt="Foto" class="w-full h-full object-contain"
-                                     data-ext-index="0"
-                                     data-base-url="${urlBase}"
-                                     onerror="rotarExtensiones(this)">
+                                 onclick="abrirPopup(this.querySelector('img').src, '${p.descripcion || codigoReal}')">
+                                ${urlCompleta ? `<img src="${urlCompleta}" alt="Foto" class="w-full h-full object-contain" onerror="manejarErrorImagen(this)">` : `<div class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>`}
                             </div>
                         </td>
-                        <td class="p-5 font-mono text-xs text-blue-600 font-black tracking-tighter">${p.stock_code}</td>
+                        <td class="p-5 font-mono text-xs text-blue-600 font-black tracking-tighter">${codigoReal}</td>
                         <td class="p-5">
                             <div class="text-gray-900 font-bold group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</div>
                         </td>
@@ -222,11 +227,10 @@
             }).join('');
         }
 
-        // Renderizado en formato de cuadrícula/tarjetas simétricas
         function renderizarModoCuadricula(registrosPagina) {
             const grid = document.getElementById('grid-productos');
             if (registrosPagina.length === 0) {
-                grid.innerHTML = '<div class="col-span-full p-20 text-center text-gray-400 italic">No se encontraron registros para esta combinación de filtros.</div>';
+                grid.innerHTML = '<div class="col-span-full p-20 text-center text-gray-400 italic">No se encontraron registros.</div>';
                 return;
             }
 
@@ -234,29 +238,24 @@
                 const precioOriginal = parseFloat(p.Price) || 0;
                 const stockReal = parseInt(p.Stock) || 0;
                 const precioIVA = (precioOriginal * 1.15).toFixed(2);
+                const codigoReal = p.stock_code || "";
 
                 let stockColor = "text-green-600 border-green-200 bg-green-50";
                 if (stockReal <= 0) stockColor = "text-red-600 border-red-200 bg-red-50";
                 else if (stockReal <= 5) stockColor = "text-yellow-600 border-yellow-200 bg-yellow-50";
 
-                let nombreFotoBase = (p.Foto || p.stock_code || "").toString().trim();
-                nombreFotoBase = nombreFotoBase.replace(/\.[^/.]+$/, "");
-
-                const urlBase = `${URL_STORAGE}${nombreFotoBase}`;
-                const urlInicial = `${urlBase}.jpg`;
+                const fotoLimpia = obtenerNombreFotoLimpio(p);
+                const urlCompleta = fotoLimpia ? `${URL_STORAGE}${encodeURIComponent(fotoLimpia)}` : "";
 
                 return `
                     <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col p-4 group">
                         <div class="w-full aspect-square bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 cursor-pointer mb-4 hover:scale-[1.02] transition-transform"
-                             onclick="abrirPopup(this.querySelector('img').src, '${p.descripcion || p.stock_code}')">
-                            <img src="${urlInicial}" alt="Foto" class="w-full h-full object-contain p-2"
-                                 data-ext-index="0"
-                                 data-base-url="${urlBase}"
-                                 onerror="rotarExtensiones(this)">
+                             onclick="abrirPopup(this.querySelector('img').src, '${p.descripcion || codigoReal}')">
+                            ${urlCompleta ? `<img src="${urlCompleta}" alt="Foto" class="w-full h-full object-contain p-2" onerror="manejarErrorImagen(this)">` : `<div class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300"><svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>`}
                         </div>
                         <div class="flex-1 flex flex-col justify-between">
                             <div class="mb-3">
-                                <div class="text-xs font-mono text-blue-600 font-black tracking-tighter uppercase mb-1">${p.stock_code}</div>
+                                <div class="text-xs font-mono text-blue-600 font-black tracking-tighter uppercase mb-1">${codigoReal}</div>
                                 <h4 class="text-sm font-bold text-gray-900 line-clamp-2 group-hover:text-blue-900 transition-colors">${p.descripcion || '---'}</h4>
                             </div>
                             <div class="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
@@ -273,27 +272,13 @@
             }).join('');
         }
 
-        // Conmutación recursiva de extensiones alternativas en caso de fallo de carga original
-        function rotarExtensiones(img) {
-            const extensiones = [".JPG", ".jpeg", ".JPEG", ".png", ".PNG"];
-            let currentIndex = parseInt(img.getAttribute('data-ext-index'));
-            const baseUrl = img.getAttribute('data-base-url');
-            const timestamp = `?t=${new Date().getTime()}`;
-
-            if (currentIndex < extensiones.length) {
-                const proximaExt = extensiones[currentIndex];
-                img.setAttribute('data-ext-index', currentIndex + 1);
-                img.src = `${baseUrl}${proximaExt}`;
-            } else if (currentIndex === extensiones.length) {
-                img.setAttribute('data-ext-index', currentIndex + 1);
-                img.src = `${baseUrl}.jpg${timestamp}`;
-            } else {
-                img.onerror = null; 
-                img.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23d1d5db'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' /></svg>";
-            }
+        function manejarErrorImagen(img) {
+            img.onerror = null; 
+            img.parentElement.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300"><svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>`;
         }
 
         function abrirPopup(url, titulo) {
+            if(!url || url.includes('svg')) return;
             document.getElementById('popup-titulo').innerText = titulo;
             document.getElementById('popup-img-tag').src = url;
             document.getElementById('popup-imagen').classList.remove('hidden');
@@ -318,14 +303,16 @@
             if (t1 !== "") {
                 datosFiltrados = datosFiltrados.filter(p => 
                     (p.descripcion && p.descripcion.toLowerCase().includes(t1)) ||
-                    (p.LongDescription && p.LongDescription.toLowerCase().includes(t1))
+                    (p.LongDescription && p.LongDescription.toLowerCase().includes(t1)) ||
+                    ((p.stock_code || "").toLowerCase().includes(t1))
                 );
             }
             
             if (t2 !== "") {
                 productosFiltrados = datosFiltrados.filter(p => 
                     (p.descripcion && p.descripcion.toLowerCase().includes(t2)) ||
-                    (p.LongDescription && p.LongDescription.toLowerCase().includes(t2))
+                    (p.LongDescription && p.LongDescription.toLowerCase().includes(t2)) ||
+                    ((p.stock_code || "").toLowerCase().includes(t2))
                 );
             } else {
                 productosFiltrados = datosFiltrados;
@@ -346,13 +333,13 @@
                 const limiteBloque = 1000;
                 const promesas = [];
                 
-                for (let i = 0; i < 10; i++) {
+                for (let i = 0; i < 13; i++) {
                     const desde = i * limiteBloque;
                     const hasta = desde + limiteBloque - 1;
                     
                     promesas.push(
                         supabaseClient
-                            .from('productos_web')
+                            .from('productos_webMarcoJr')
                             .select('stock_code, descripcion, Price, Stock, LongDescription, Foto')
                             .range(desde, hasta)
                             .then(res => {
@@ -392,7 +379,7 @@
                 .channel('cambios-inventario')
                 .on(
                     'postgres_changes', 
-                    { event: '*', schema: 'public', table: 'productos_web' }, 
+                    { event: '*', schema: 'public', table: 'productos_webMarcoJr' }, 
                     (payload) => {
                         cargarProductosIniciales();
                     }
