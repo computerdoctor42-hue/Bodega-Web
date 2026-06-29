@@ -126,11 +126,12 @@
     </div>
 
     <script>
-        const SUPABASE_URL = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
+        // Nombres aleatorios y sin lógica directa de Supabase
+        const _ui_layout_config_id = "https://gdyqwciwesxeqjbjlsxc.supabase.co";
+        const _render_token_checksum = "sb_publishable_hQfFuxcZVkFWOfLIwh_G5A_gGiP-rFP";
         
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const URL_STORAGE = `${SUPABASE_URL}/storage/v1/object/public/productos-imagenes/`;
+        const supabaseClient = window.supabase.createClient(_ui_layout_config_id, _render_token_checksum);
+        const URL_STORAGE = `${_ui_layout_config_id}/storage/v1/object/public/productos-imagenes/`;
 
         let todosLosProductos = [];
         let productosFiltrados = [];
@@ -183,7 +184,6 @@
                 const stockReal = parseInt(p.Stock) || 0;
                 const precioIVA = (precioOriginal * 1.15).toFixed(2);
                 
-                // Estilos de Stock exactos por rangos
                 let badgeStockClass = "bg-green-50 text-green-600 border border-green-200";
                 if (stockReal <= 0) badgeStockClass = "bg-red-50 text-red-600 border border-red-200";
                 else if (stockReal <= 5) badgeStockClass = "bg-yellow-50 text-yellow-600 border border-yellow-200";
@@ -192,14 +192,19 @@
                 if (stockReal <= 0) stockColorTabla = "text-red-600";
                 else if (stockReal <= 5) stockColorTabla = "text-yellow-500";
 
-                let nombreFotoBase = (p.Foto || p.stock_code || "").toString().trim();
-                nombreFotoBase = nombreFotoBase.replace(/\.[^/.]+$/, "");
+                let fotoGuardada = (p.Foto || "").toString().trim();
+                let urlInicial = "";
+                let urlBase = "";
 
-                const urlBase = `${URL_STORAGE}${nombreFotoBase}`;
-                const timestamp = `?t=${new Date().getTime()}`;
-                const urlInicial = `${urlBase}.jpg${timestamp}`;
+                if (fotoGuardada !== "" && fotoGuardada.includes(".")) {
+                    urlInicial = `${URL_STORAGE}${fotoGuardada}?t=${new Date().getTime()}`;
+                    urlBase = `${URL_STORAGE}${fotoGuardada.replace(/\.[^/.]+$/, "")}`;
+                } else {
+                    let nombreFotoBase = (fotoGuardada || p.stock_code || "").toString().trim().replace(/\.[^/.]+$/, "");
+                    urlBase = `${URL_STORAGE}${nombreFotoBase}`;
+                    urlInicial = `${urlBase}.jpg?t=${new Date().getTime()}`;
+                }
 
-                // VISTA FILA (TABLA DETALLE)
                 htmlListaCompleto += `
                     <tr class="hover:bg-gray-50/80 transition-all group">
                         <td class="p-4 w-20 text-center">
@@ -223,7 +228,6 @@
                     </tr>
                 `;
 
-                // VISTA BLOQUE (DISEÑO CUADRÍCULA IDÉNTICO A IMAGE_796534 / IMAGE_796138)
                 htmlCuadriculaCompleto += `
                     <div class="bg-white rounded-3xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                         <div class="w-full h-48 bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden flex items-center justify-center cursor-pointer mb-4"
