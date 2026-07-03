@@ -58,7 +58,6 @@
             </div>
 
             <label class="flex items-center space-x-2 cursor-pointer select-none shrink-0">
-                <!-- Modificado: Agregado atributo checked por defecto -->
                 <input type="checkbox" id="chk-mostrar-cero" checked onchange="filtrarYRenderizar()" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 transition-all">
                 <span class="text-sm font-bold text-gray-700">Incluir productos con cero stock</span>
             </label>
@@ -96,7 +95,7 @@
             </div>
 
             <div id="vista-cuadricula-contenedor" class="hidden p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 bg-white">
-                </div>
+            </div>
 
             <div class="bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between">
                 <div class="text-sm font-medium text-gray-500" id="info-paginacion">
@@ -114,14 +113,15 @@
         </footer>
     </div>
 
+    <!-- POPUP DE IMAGEN RESPONSIVO REPARADO -->
     <div id="popup-imagen" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="cerrarPopup()">
-        <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-4 flex flex-col items-center" style="width: 650px;" onclick="event.stopPropagation()">
+        <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-4 flex flex-col items-center w-full max-w-[550px]" onclick="event.stopPropagation()">
             <div class="w-full flex justify-between items-center mb-2">
-                <h3 id="popup-titulo" class="text-sm font-bold text-gray-900 truncate pr-4"></h3>
-                <button onclick="cerrarPopup()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">&times;</button>
+                <h3 id="popup-titulo" class="text-sm font-bold text-gray-900 truncate pr-4 uppercase"></h3>
+                <button onclick="cerrarPopup()" class="text-gray-400 hover:text-gray-700 text-3xl font-light leading-none">&times;</button>
             </div>
-            <div class="bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100" style="width: 600px; height: 600px;">
-                <img id="popup-img-tag" src="" alt="Producto Ampliado" class="w-full h-full object-contain">
+            <div class="bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 w-full aspect-square max-h-[75vh]">
+                <img id="popup-img-tag" src="" alt="Producto Ampliado" class="w-full h-full object-contain p-2">
             </div>
         </div>
     </div>
@@ -136,7 +136,6 @@
         let todosLosProductos = [];
         let productosFiltrados = [];
         let paginaActual = 1;
-        // Modificado: Bajado el bloque visible por página de 100 a 50
         const registrosPorPagina = 50; 
         let vistaActual = "lista"; 
 
@@ -206,7 +205,6 @@
                     urlInicial = `${urlBase}.jpg?t=${new Date().getTime()}`;
                 }
 
-                // Modificado: Agregado loading="lazy" a la etiqueta img
                 htmlListaCompleto += `
                     <tr class="hover:bg-gray-50/80 transition-all group">
                         <td class="p-4 w-20 text-center">
@@ -231,7 +229,6 @@
                     </tr>
                 `;
 
-                // Modificado: Agregado loading="lazy" a la etiqueta img
                 htmlCuadriculaCompleto += `
                     <div class="bg-white rounded-3xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                         <div class="w-full h-48 bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden flex items-center justify-center cursor-pointer mb-4"
