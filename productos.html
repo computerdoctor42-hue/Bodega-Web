@@ -113,7 +113,6 @@
         </footer>
     </div>
 
-    <!-- POPUP DE IMAGEN RESPONSIVO REPARADO -->
     <div id="popup-imagen" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="cerrarPopup()">
         <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-4 flex flex-col items-center w-full max-w-[550px]" onclick="event.stopPropagation()">
             <div class="w-full flex justify-between items-center mb-2">
@@ -387,7 +386,28 @@
                     'postgres_changes', 
                     { event: '*', schema: 'public', table: 'productos_web' }, 
                     (payload) => {
-                        cargarProductosIniciales();
+                        console.log("Cambio detectado en tiempo real:", payload);
+
+                        if (!payload.new || !payload.new.stock_code) return;
+
+                        const productoCambiado = payload.new;
+                        const index = todosLosProductos.findIndex(p => p.stock_code === productoCambiado.stock_code);
+
+                        if (index !== -1) {
+                            todosLosProductos[index].Stock = productoCambiado.Stock;
+                            todosLosProductos[index].Price = productoCambiado.Price;
+                            todosLosProductos[index].descripcion = productoCambiado.descripcion;
+                            todosLosProductos[index].Foto = productoCambiado.Foto;
+                        } else {
+                            todosLosProductos.push(productoCambiado);
+                            todosLosProductos.sort((a, b) => {
+                                const descA = (a.descripcion || "").toLowerCase();
+                                const descB = (b.descripcion || "").toLowerCase();
+                                return descA.localeCompare(descB);
+                            });
+                        }
+
+                        filtrarYRenderizar();
                     }
                 )
                 .subscribe();
