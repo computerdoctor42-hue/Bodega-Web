@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo RealTime - EXPERTOS EN MANTENIMIENTO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-900 flex flex-col justify-between">
+
+    <div>
+        <nav class="bg-white py-4 px-6 mb-8 border-b border-gray-100">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="flex items-center">
+                    <img src="logo_expertos_2912025-1.png" alt="Expertos en Mantenimiento" class="h-12 w-auto object-contain">
+                </div>
+                <ul class="flex space-x-6 text-gray-500 font-semibold text-sm uppercase tracking-wider">
+                    <li><a href="#" class="hover:text-blue-600 transition">Inicio</a></li>
+                    <li><a href="#" class="text-blue-600 font-bold">Productos</a></li>
+                    <li><a href="#" class="hover:text-blue-600 transition">Registro</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="max-w-6xl mx-auto px-4">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-black text-gray-900 tracking-tight">Inventario de Bodega</h1>
+                    <p class="text-gray-500 font-medium mt-1">Sincronización de Catálogo</p>
+                </div>
+                <div id="status-badge" class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                    <span class="w-2 h-2 mr-2 rounded-full bg-red-600"></span>
+                    DESCONECTADO
+                </div>
+            </header>
+
+            <!-- Contenedor del Mensaje de Bloqueo Profesional -->
+            <div class="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-200 p-12 text-center max-w-2xl mx-auto my-12">
+                <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-5 border border-red-100">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                
+                <h2 class="text-2xl font-black text-gray-900 mb-3 tracking-tight">Servicio Temporalmente Interrumpido</h2>
+                
+                <p class="text-gray-600 text-sm leading-relaxed mb-6">
+                    El sistema se encuentra desconectado. Para restablecer la sincronización en vivo y garantizar la seguridad de los datos, el servicio debe ser migrado a un servidor propio, dedicado y único.
+                </p>
+
+                <div class="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Módulo de carga e inventario suspendido
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-12 pb-10 text-center">
+        <p class="text-gray-400 text-sm font-medium uppercase tracking-widest">&copy; 2026 TROYABANANA • Taribela Lubricadora</p>
+    </footer>
+
+    <script>
+        // Todo el script de carga e integración de base de datos ha sido removido/desactivado por seguridad.
+        window.onload = function() {
+            console.warn("Sistema desconectado. Requiere servidor propio para reanudar operaciones.");
+        };
+    </script>
+</body>
+</html>
