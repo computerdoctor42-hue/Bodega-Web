@@ -7,7 +7,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
@@ -113,6 +113,7 @@
         </footer>
     </div>
 
+    <!-- POPUP DE IMAGEN -->
     <div id="popup-imagen" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="cerrarPopup()">
         <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-4 flex flex-col items-center w-full max-w-[550px]" onclick="event.stopPropagation()">
             <div class="w-full flex justify-between items-center mb-2">
@@ -121,6 +122,19 @@
             </div>
             <div class="bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 w-full aspect-square max-h-[75vh]">
                 <img id="popup-img-tag" src="" alt="Producto Ampliado" class="w-full h-full object-contain p-2">
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP DE DESCRIPCIÓN LARGA (AL DAR CLIC EN EL CÓDIGO) -->
+    <div id="popup-descripcion" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4" onclick="cerrarPopupDesc()">
+        <div class="bg-white rounded-2xl overflow-hidden shadow-2xl p-6 flex flex-col items-center w-full max-w-[550px]" onclick="event.stopPropagation()">
+            <div class="w-full flex justify-between items-center mb-3 border-b pb-2">
+                <h3 id="popup-desc-titulo" class="text-sm font-bold text-blue-600 truncate pr-4 uppercase">Detalle del Producto</h3>
+                <button onclick="cerrarPopupDesc()" class="text-gray-400 hover:text-gray-700 text-3xl font-light leading-none">&times;</button>
+            </div>
+            <div class="w-full bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-[60vh] overflow-y-auto">
+                <p id="popup-desc-texto" class="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap font-medium"></p>
             </div>
         </div>
     </div>
@@ -183,6 +197,10 @@
                 const stockReal = parseInt(p.Stock) || 0;
                 const precioIVA = (precioOriginal * 1.15).toFixed(2);
                 
+                // Preparamos la descripción larga limpia para inyectarla de forma segura en el onclick
+                const descLarga = (p.LongDescription || "Sin descripción detallada disponible.").replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+                const tituloPopup = (`${p.stock_code} - ${p.descripcion || ''}`).replace(/'/g, "&#39;");
+
                 let badgeStockClass = "bg-green-50 text-green-600 border border-green-200";
                 if (stockReal <= 0) badgeStockClass = "bg-red-50 text-red-600 border border-red-200";
                 else if (stockReal <= 5) badgeStockClass = "bg-yellow-50 text-yellow-600 border border-yellow-200";
@@ -216,7 +234,7 @@
                                      onerror="rotarExtensiones(this)">
                             </div>
                         </td>
-                        <td class="p-4 font-mono text-xs text-blue-600 font-bold">${p.stock_code}</td>
+                        <td class="p-4 font-mono text-xs text-blue-600 font-bold cursor-pointer hover:underline" title="Ver descripción larga" onclick="abrirPopupDesc('${tituloPopup}', '${descLarga}')">${p.stock_code}</td>
                         <td class="p-4">
                             <div class="text-gray-900 font-bold text-sm uppercase">${p.descripcion || '---'}</div>
                         </td>
@@ -241,7 +259,7 @@
                         
                         <div class="flex flex-col flex-grow justify-between gap-2">
                             <div>
-                                <div class="text-blue-600 font-bold text-xs mb-1">${p.stock_code}</div>
+                                <div class="text-blue-600 font-bold text-xs mb-1 cursor-pointer hover:underline inline-block" title="Ver descripción larga" onclick="abrirPopupDesc('${tituloPopup}', '${descLarga}')">${p.stock_code}</div>
                                 <div class="text-gray-900 font-bold text-sm uppercase line-clamp-2 min-h-[40px]">
                                     ${p.descripcion || '---'}
                                 </div>
@@ -292,6 +310,17 @@
         function cerrarPopup() {
             document.getElementById('popup-imagen').classList.add('hidden');
             document.getElementById('popup-img-tag').src = "";
+        }
+
+        function abrirPopupDesc(titulo, texto) {
+            document.getElementById('popup-desc-titulo').innerText = titulo;
+            document.getElementById('popup-desc-texto').innerText = texto;
+            document.getElementById('popup-descripcion').classList.remove('hidden');
+        }
+
+        function cerrarPopupDesc() {
+            document.getElementById('popup-descripcion').classList.add('hidden');
+            document.getElementById('popup-desc-texto').innerText = "";
         }
 
         function filtrarYRenderizar() {
@@ -398,6 +427,7 @@
                             todosLosProductos[index].Price = productoCambiado.Price;
                             todosLosProductos[index].descripcion = productoCambiado.descripcion;
                             todosLosProductos[index].Foto = productoCambiado.Foto;
+                            todosLosProductos[index].LongDescription = productoCambiado.LongDescription;
                         } else {
                             todosLosProductos.push(productoCambiado);
                             todosLosProductos.sort((a, b) => {
