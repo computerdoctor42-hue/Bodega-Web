@@ -7,7 +7,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
@@ -79,13 +79,14 @@
                             <th class="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Imagen</th>
                             <th class="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Código</th>
                             <th class="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Descripción</th>
+                            <th class="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Marca</th>
                             <th class="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Stock</th>
                             <th class="p-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Precio Final (+IVA)</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-productos" class="divide-y divide-gray-50">
                         <tr>
-                            <td colspan="5" class="p-20 text-center">
+                            <td colspan="6" class="p-20 text-center">
                                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-600 mb-4"></div>
                                 <p class="text-gray-400 font-medium text-sm">Descargando catálogo completo en vivo...</p>
                             </td>
@@ -148,6 +149,7 @@
 
         let todosLosProductos = [];
         let productosFiltrados = [];
+        let mapaMarcas = {}; // Diccionario global para las marcas
         let paginaActual = 1;
         const registrosPorPagina = 50; 
         let vistaActual = "lista"; 
@@ -167,6 +169,22 @@
             renderizarTabla();
         }
 
+        async function cargarInvMarkWeb() {
+            try {
+                const { data, error } = await supabaseClient.from('InvMark').select('MarkCode, Description');
+                if (error) throw error;
+                if (data) {
+                    data.forEach(m => {
+                        if (m.MarkCode) {
+                            mapaMarcas[m.MarkCode.trim()] = m.Description ? m.Description.trim() : '';
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Error cargando marcas:", e);
+            }
+        }
+
         function renderizarTabla() {
             const tabla = document.getElementById('tabla-productos');
             const cuadricula = document.getElementById('vista-cuadricula-contenedor');
@@ -184,7 +202,7 @@
             document.getElementById('btn-next').disabled = (indiceFin >= total);
 
             if (registrosPagina.length === 0) {
-                tabla.innerHTML = '<tr><td colspan="5" class="p-20 text-center text-gray-400 italic">No se encontraron productos.</td></tr>';
+                tabla.innerHTML = '<tr><td colspan="6" class="p-20 text-center text-gray-400 italic">No se encontraron productos.</td></tr>';
                 cuadricula.innerHTML = `<div class="col-span-full p-20 text-center text-gray-400 italic">No se encontraron productos.</div>`;
                 return;
             }
@@ -197,6 +215,10 @@
                 const stockReal = parseInt(p.Stock) || 0;
                 const precioIVA = (precioOriginal * 1.15).toFixed(2);
                 
+                // Obtenemos la descripción de la marca usando el mapa (el campo Description de InvMark)
+                const codigoMarcaKey = p.MarkCode ? p.MarkCode.trim() : '';
+                const nombreMarca = mapaMarcas[codigoMarcaKey] || p.MarkCode || '---';
+
                 // Código seguro sanitizado
                 const codeSeguro = (p.stock_code || "").toString().replace(/'/g, "\\'");
 
@@ -237,6 +259,9 @@
                         <td class="p-4">
                             <div class="text-gray-900 font-bold text-sm uppercase">${p.descripcion || '---'}</div>
                         </td>
+                        <td class="p-4">
+                            <div class="text-xs font-bold text-gray-600 uppercase bg-gray-100 px-2.5 py-1 rounded-md inline-block">${nombreMarca}</div>
+                        </td>
                         <td class="p-4 text-center font-black text-xl ${stockColorTabla}">${stockReal}</td>
                         <td class="p-4 text-right">
                             <span class="text-xs font-medium text-gray-400 mr-0.5">$</span>
@@ -258,7 +283,10 @@
                         
                         <div class="flex flex-col flex-grow justify-between gap-2">
                             <div>
-                                <div class="text-blue-600 font-bold text-xs mb-1 cursor-pointer hover:underline inline-block" title="Ver descripción larga" onclick="abrirPopupDesc('${codeSeguro}')">${p.stock_code}</div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <div class="text-blue-600 font-bold text-xs cursor-pointer hover:underline inline-block" title="Ver descripción larga" onclick="abrirPopupDesc('${codeSeguro}')">${p.stock_code}</div>
+                                    <span class="text-[10px] font-bold text-gray-600 uppercase bg-gray-100 px-2 py-0.5 rounded">${nombreMarca}</span>
+                                </div>
                                 <div class="text-gray-900 font-bold text-sm uppercase line-clamp-2 min-h-[40px]">
                                     ${p.descripcion || '---'}
                                 </div>
@@ -344,7 +372,8 @@
                 datosFiltradosFase = datosFiltradosFase.filter(p => 
                     (p.descripcion && p.descripcion.toLowerCase().includes(t1)) ||
                     (p.LongDescription && p.LongDescription.toLowerCase().includes(t1)) ||
-                    (p.stock_code && p.stock_code.toLowerCase().includes(t1))
+                    (p.stock_code && p.stock_code.toLowerCase().includes(t1)) ||
+                    (p.MarkCode && (mapaMarcas[p.MarkCode.trim()] || "").toLowerCase().includes(t1))
                 );
             }
             
@@ -352,7 +381,8 @@
                 productosFiltrados = datosFiltradosFase.filter(p => 
                     (p.descripcion && p.descripcion.toLowerCase().includes(t2)) ||
                     (p.LongDescription && p.LongDescription.toLowerCase().includes(t2)) ||
-                    (p.stock_code && p.stock_code.toLowerCase().includes(t2))
+                    (p.stock_code && p.stock_code.toLowerCase().includes(t2)) ||
+                    (p.MarkCode && (mapaMarcas[p.MarkCode.trim()] || "").toLowerCase().includes(t2))
                 );
             } else {
                 productosFiltrados = datosFiltradosFase;
@@ -370,6 +400,9 @@
 
         async function cargarProductosIniciales() {
             try {
+                // Primero cargamos el diccionario de marcas de Supabase
+                await cargarInvMarkWeb();
+
                 const limiteBloque = 1000;
                 const promesas = [];
                 
@@ -380,7 +413,7 @@
                     promesas.push(
                         supabaseClient
                             .from('productos_web') 
-                            .select('stock_code, descripcion, Price, Stock, LongDescription, Foto')
+                            .select('stock_code, descripcion, Price, Stock, LongDescription, Foto, MarkCode') // Incluimos MarkCode aquí
                             .range(desde, hasta)
                             .then(res => {
                                 if (res.error) throw res.error;
@@ -434,6 +467,7 @@
                             todosLosProductos[index].descripcion = productoCambiado.descripcion;
                             todosLosProductos[index].Foto = productoCambiado.Foto;
                             todosLosProductos[index].LongDescription = productoCambiado.LongDescription;
+                            todosLosProductos[index].MarkCode = productoCambiado.MarkCode;
                         } else {
                             todosLosProductos.push(productoCambiado);
                             todosLosProductos.sort((a, b) => {
